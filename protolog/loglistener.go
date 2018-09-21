@@ -11,7 +11,7 @@ import (
 	"github.com/elastic/beats/libbeat/logp"
 
 	"github.com/Graylog2/go-gelf/gelf"
-	"github.com/hartfordfive/protologbeat/config"
+	"github.com/channelgrabber/protologbeat/config"
 	"github.com/pquerna/ffjson/ffjson"
 	"github.com/xeipuuv/gojsonschema"
 )
