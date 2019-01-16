@@ -255,10 +255,9 @@ func (ll *LogListener) processErr(logData string, err error, tags []string) {
 
 func (ll *LogListener) sendEvent(event common.MapStr) {
 	/*
-		// todo: examine this
+		// todo: examine this if necessary, timestamp seems to need to be provided in beat.Event struct now (see protologbeat.go)
 			event["@timestamp"] = common.Time(time.Now())
-		timestamp seems to need to be provided in beat.Event struct (see protologbeat.go)
-		2018-12-18T15:43:47.094-0700	WARN	elasticsearch/client.go:531	Cannot index event publisher.Event{Content:beat.Event{Timestamp:time.Time{wall:0x0, ext:0, loc:(*time.Location)(nil)}, Meta:common.MapStr(nil), Fields:common.MapStr{"cpu_rpm_avg":992, "@timestamp":common.Time{wall:0x36c6f0f2, ext:63680769825, loc:(*time.Location)(nil)}, "gpu_volt_avg":0.912, "agent":common.MapStr{"version":"7.0.0", "type":"protologbeat", "hostname":"sgunat"}, "host":common.MapStr{"name":"sgunat"}, "other_rpm_avg":1545.6666666666667, "other_temp_avg":49, "cpu_temp_avg":51.8, "sensors":[]interface {}{common.MapStr{"label":"GPU core", "class":"gpu_volt", "name":"in0", "adapter":"nouveau-pci-0300", "value":0.912, "value_type":"float", "units":"V"}, common.MapStr{"name":"fan1", "adapter":"nouveau-pci-0300", "value":2880, "value_type":"float", "units":"RPM", "label":"fan1", "class":"other_rpm"}, common.MapStr{"value":48, "value_type":"float", "units":"°C", "label":"temp1", "class":"other_temp", "name":"temp1", "adapter":"nouveau-pci-0300"}, common.MapStr{"name":"fan1", "adapter":"dell_smm-virtual-0", "value":992, "value_type":"float", "units":"RPM", "label":"Processor Fan", "class":"cpu_rpm"}, common.MapStr{"name":"fan2", "adapter":"dell_smm-virtual-0", "value":900, "value_type":"float", "units":"RPM", "label":"Other Fan", "class":"other_rpm"}, common.MapStr{"class":"other_rpm", "name":"fan3", "adapter":"dell_smm-virtual-0", "value":857, "value_type":"float", "units":"RPM", "label":"Other Fan"}, common.MapStr{"class":"other_temp", "name":"temp1", "adapter":"dell_smm-virtual-0", "value":50, "value_type":"float", "units":"°C", "label":"Other"}, common.MapStr{"class":"cpu_temp", "name":"temp1", "adapter":"coretemp-isa-0000", "value":53, "value_type":"float", "units":"°C", "label":"Package id 0"}, common.MapStr{"value_type":"float", "units":"°C", "label":"Core 0", "class":"cpu_temp", "name":"temp2", "adapter":"coretemp-isa-0000", "value":52}, common.MapStr{"value":53, "value_type":"float", "units":"°C", "label":"Core 1", "class":"cpu_temp", "name":"temp3", "adapter":"coretemp-isa-0000"}, common.MapStr{"value_type":"float", "units":"°C", "label":"Core 2", "class":"cpu_temp", "name":"temp4", "adapter":"coretemp-isa-0000", "value":53}, common.MapStr{"class":"cpu_temp", "name":"temp5", "adapter":"coretemp-isa-0000", "value":48, "value_type":"float", "units":"°C", "label":"Core 3"}}, "type":"protologbeat"}, Private:interface {}(nil)}, Flags:0x0} (status=400): {"type":"mapper_parsing_exception","reason":"failed to parse","caused_by":{"type":"json_parse_exception","reason":"Duplicate field '@timestamp'\n at [Source: org.elasticsearch.common.bytes.BytesReference$MarkSupportingStreamInputWrapper@2ed1a99c; line: 1, column: 54]"}}
+		2018-12-18T15:43:47.094-0700	WARN	elasticsearch/client.go:531	Cannot index event publisher.Event{Content:beat.Event{Timestamp:time.Time{wall:0x0, ext:0, loc:(*time.Location)(nil)}, Meta:common.MapStr(nil), Fields:common.MapStr{"@timestamp":common.Time{wall:0x36c6f0f2, ext:63680769825, loc:(*time.Location)(nil)}, ... "type":"protologbeat"}, Private:interface {}(nil)}, Flags:0x0} (status=400): {"type":"mapper_parsing_exception","reason":"failed to parse","caused_by":{"type":"json_parse_exception","reason":"Duplicate field '@timestamp'\n at [Source: org.elasticsearch.common.bytes.BytesReference$MarkSupportingStreamInputWrapper@2ed1a99c; line: 1, column: 54]"}}
 	*/
 	ll.logEntriesRecieved <- event
 }
@@ -272,7 +271,8 @@ func (ll *LogListener) processGelfMessage(msg *gelf.Message) {
 	event["short_message"] = msg.Short
 	event["full_message"] = msg.Full
 
-	// todo: this is probably broken due to @timestamp, see comment above in sendEvent
+	// todo: examine this if necessary, timestamp seems to need to be provided in beat.Event struct now (see protologbeat.go)
+  //   see comment above in sendEvent
 	// 1 ms = 1000000 ns
   /*
 	if msg.TimeUnix == 0 {
