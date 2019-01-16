@@ -1,42 +1,22 @@
 {
-  "mappings": {
-    "_default_": {
-      "_all": {
-        "enabled": true,
-        "norms": {
-          "enabled": false
-        }
-      },
-      "dynamic_templates": [
-        {
-          "template1": {
-            "mapping": {
-              "doc_values": true,
-              "ignore_above": 1024,
-              "index": "not_analyzed",
-              "type": "{dynamic_type}"
+    "index_patterns": ["bla"],
+    "settings": {
+        "number_of_shards": 1
+    },
+    "mappings": {
+        "example": {
+            "_source": {
+                "enabled": false
             },
-            "match": "*"
-          }
+            "properties": {
+                "host_name": {
+                    "type": "keyword"
+                },
+                "created_at": {
+                    "type": "date",
+                    "format": "EEE MMM dd HH:mm:ss Z YYYY"
+                }
+            }
         }
-      ],
-      "properties": {
-        "@timestamp": {
-          "type": "date"
-        },
-        "message": {
-          "type": "text",
-          "index": "analyzed"
-        },
-        "offset": {
-          "type": "long",
-          "doc_values": "true"
-        }
-      }
     }
-  },
-  "settings": {
-    "index.refresh_interval": "5s"
-  },
-  "template": "mockbeat-*"
 }

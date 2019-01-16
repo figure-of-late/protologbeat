@@ -91,6 +91,10 @@ func (self *Swap) Get() error {
 	return nil
 }
 
+func (self *HugeTLBPages) Get() error {
+	return ErrNotImplemented{runtime.GOOS}
+}
+
 func (self *Cpu) Get() error {
 	var count C.mach_msg_type_number_t = C.HOST_CPU_LOAD_INFO_COUNT
 	var cpuload C.host_cpu_load_info_data_t
@@ -326,6 +330,18 @@ func (self *ProcArgs) Get(pid int) error {
 	return err
 }
 
+func (self *ProcEnv) Get(pid int) error {
+	if self.Vars == nil {
+		self.Vars = map[string]string{}
+	}
+
+	env := func(k, v string) {
+		self.Vars[k] = v
+	}
+
+	return kern_procargs(pid, nil, nil, env)
+}
+
 func (self *ProcExe) Get(pid int) error {
 	exe := func(arg string) {
 		self.Name = arg
@@ -408,6 +424,11 @@ func kern_procargs(pid int,
 			return fmt.Errorf("Error reading args: %v", err)
 		}
 		pair := bytes.SplitN(chop(line), delim, 2)
+
+		if len(pair) != 2 {
+			return fmt.Errorf("Error reading process information for PID: %d", pid)
+		}
+
 		env(string(pair[0]), string(pair[1]))
 	}
 

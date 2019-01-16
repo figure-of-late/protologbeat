@@ -1,11 +1,26 @@
+// Licensed to Elasticsearch B.V. under one or more contributor
+// license agreements. See the NOTICE file distributed with
+// this work for additional information regarding copyright
+// ownership. Elasticsearch B.V. licenses this file to you under
+// the Apache License, Version 2.0 (the "License"); you may
+// not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 package bucket
 
 import (
-	"fmt"
-	"net/http"
-
 	"github.com/elastic/beats/libbeat/common"
-	"github.com/elastic/beats/libbeat/logp"
+	"github.com/elastic/beats/libbeat/common/cfgwarn"
+	"github.com/elastic/beats/metricbeat/helper"
 	"github.com/elastic/beats/metricbeat/mb"
 	"github.com/elastic/beats/metricbeat/mb/parse"
 )
@@ -25,35 +40,29 @@ var (
 // init registers the MetricSet with the central registry.
 // The New method will be called after the setup of the module and before starting to fetch data
 func init() {
-	if err := mb.Registry.AddMetricSet("couchbase", "bucket", New, hostParser); err != nil {
-		panic(err)
-	}
+	mb.Registry.MustAddMetricSet("couchbase", "bucket", New,
+		mb.WithHostParser(hostParser),
+		mb.DefaultMetricSet(),
+	)
 }
 
 // MetricSet type defines all fields of the MetricSet
-// As a minimum it must inherit the mb.BaseMetricSet fields, but can be extended with
-// additional entries. These variables can be used to persist data or configuration between
-// multiple fetch calls.
 type MetricSet struct {
 	mb.BaseMetricSet
-	client *http.Client
+	http *helper.HTTP
 }
 
 // New create a new instance of the MetricSet
-// Part of new is also setting up the configuration by processing additional
-// configuration entries if needed.
 func New(base mb.BaseMetricSet) (mb.MetricSet, error) {
-	logp.Warn("EXPERIMENTAL: The couchbase bucket metricset is experimental")
+	cfgwarn.Beta("The couchbase bucket metricset is beta")
 
-	config := struct{}{}
-
-	if err := base.Module().UnpackConfig(&config); err != nil {
+	http, err := helper.NewHTTP(base)
+	if err != nil {
 		return nil, err
 	}
-
 	return &MetricSet{
 		BaseMetricSet: base,
-		client:        &http.Client{Timeout: base.Module().Config().Timeout},
+		http:          http,
 	}, nil
 }
 
@@ -61,23 +70,9 @@ func New(base mb.BaseMetricSet) (mb.MetricSet, error) {
 // It returns the event which is then forward to the output. In case of an error, a
 // descriptive error must be returned.
 func (m *MetricSet) Fetch() ([]common.MapStr, error) {
-	req, err := http.NewRequest("GET", m.HostData().SanitizedURI, nil)
-	if m.HostData().User != "" || m.HostData().Password != "" {
-		req.SetBasicAuth(m.HostData().User, m.HostData().Password)
-	}
-
-	resp, err := m.client.Do(req)
-
+	content, err := m.http.FetchContent()
 	if err != nil {
-		return nil, fmt.Errorf("error making http request: %v", err)
+		return nil, err
 	}
-
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("Error Connecting to Couchbase %d: %s", resp.StatusCode, resp.Status)
-	}
-
-	return eventsMapping(resp.Body), nil
-
+	return eventsMapping(content), nil
 }

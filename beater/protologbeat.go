@@ -2,20 +2,20 @@ package beater
 
 import (
 	"fmt"
+  "time"
 
 	"github.com/elastic/beats/libbeat/beat"
 	"github.com/elastic/beats/libbeat/common"
 	"github.com/elastic/beats/libbeat/logp"
-	"github.com/elastic/beats/libbeat/publisher"
 
-	"github.com/channelgrabber/protologbeat/config"
-	"github.com/channelgrabber/protologbeat/protolog"
+	"github.com/figure-of-late/protologbeat/config"
+	"github.com/figure-of-late/protologbeat/protolog"
 )
 
 type Protologbeat struct {
 	done        chan struct{}
 	config      config.Config
-	client      publisher.Client
+	client      beat.Client
 	logListener *protolog.LogListener
 }
 
@@ -38,7 +38,11 @@ func New(b *beat.Beat, cfg *common.Config) (beat.Beater, error) {
 func (bt *Protologbeat) Run(b *beat.Beat) error {
 	logp.Info("protologbeat is running! Hit CTRL-C to stop it.")
 
-	bt.client = b.Publisher.Connect()
+  var err error
+	bt.client, err = b.Publisher.Connect()
+  if err != nil {
+    return err
+  }
 
 	logEntriesRecieved := make(chan common.MapStr, 100000)
 	logEntriesErrors := make(chan bool, 1)
@@ -47,7 +51,7 @@ func (bt *Protologbeat) Run(b *beat.Beat) error {
 		bt.logListener.Start(logs, errs)
 	}(logEntriesRecieved, logEntriesErrors)
 
-	var event common.MapStr
+	var logEntry common.MapStr
 
 	for {
 		select {
@@ -55,15 +59,19 @@ func (bt *Protologbeat) Run(b *beat.Beat) error {
 			return nil
 		case <-logEntriesErrors:
 			return nil
-		case event = <-logEntriesRecieved:
-			if event == nil {
+		case logEntry = <-logEntriesRecieved:
+			if logEntry == nil {
 				return nil
 			}
-			if _, ok := event["type"]; !ok {
-				event["type"] = bt.config.DefaultEsLogType
+			if _, ok := logEntry["type"]; !ok {
+				logEntry["type"] = bt.config.DefaultEsLogType
 			}
-			bt.client.PublishEvent(event)
-			logp.Info("Event sent")
+      event := beat.Event{
+        Timestamp: time.Now(),
+        Fields: logEntry,
+      }
+			bt.client.Publish(event)
+			// logp.Info("Event sent")
 		}
 	}
 

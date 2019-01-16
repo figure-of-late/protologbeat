@@ -43,7 +43,7 @@ JSON schemas can be automatically generated from an object here: http://jsonsche
 - If some potential loss of log events is acceptable for you, than this may be a reasonable solution for you.
 - This application is intended for scenarios where your application can log to protologbeat running on the same physical host.  It's discouraged to use this for cross-server/cross-region/cross-datacenter logging.
 - The current date/time is automatically added to each log entry once it is received by protologbeat.
-- Considering this could log data with any type of fields, it's suggested that you add your necessary field names and types to the [protologbeat.template-es2x.json](protologbeat.template-es2x.json) or [protologbeat.template.json](protologbeat.template.json) (*ES 5.x*) index templates.
+- Considering this could log data with any type of fields, it's suggested that you add your necessary field names and types to the [protologbeat.template.json](protologbeat.template.json) index template.
 
 ### Sample Clients
 

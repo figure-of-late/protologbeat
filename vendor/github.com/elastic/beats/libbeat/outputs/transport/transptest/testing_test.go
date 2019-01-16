@@ -1,3 +1,20 @@
+// Licensed to Elasticsearch B.V. under one or more contributor
+// license agreements. See the NOTICE file distributed with
+// this work for additional information regarding copyright
+// ownership. Elasticsearch B.V. licenses this file to you under
+// the Apache License, Version 2.0 (the "License"); you may
+// not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 // Need for unit and integration tests
 
 package transptest
@@ -8,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/armon/go-socks5"
+	socks5 "github.com/armon/go-socks5"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/elastic/beats/libbeat/outputs/transport"
@@ -52,9 +69,9 @@ func TestTransportReconnectsOnConnect(t *testing.T) {
 
 	certName := "ca_test"
 	timeout := 2 * time.Second
-	GenCertsForIPIfMIssing(t, net.IP{127, 0, 0, 1}, certName)
+	GenCertForTestingPurpose(t, "127.0.0.1", certName, "")
 
-	run := func(makeServer MockServerFactory, proxy *transport.ProxyConfig) {
+	testServer(t, &config, func(t *testing.T, makeServer MockServerFactory, proxy *transport.ProxyConfig) {
 		server := makeServer(t, timeout, certName, proxy)
 		defer server.Close()
 
@@ -81,12 +98,7 @@ func TestTransportReconnectsOnConnect(t *testing.T) {
 		}
 
 		transp.Close()
-	}
-
-	run(NewMockServerTCP, nil)
-	run(NewMockServerTLS, nil)
-	run(NewMockServerTCP, &config)
-	run(NewMockServerTLS, &config)
+	})
 }
 
 func TestTransportFailConnectUnknownAddress(t *testing.T) {
@@ -94,25 +106,32 @@ func TestTransportFailConnectUnknownAddress(t *testing.T) {
 	defer l.Close()
 
 	certName := "ca_test"
-	GenCertsForIPIfMIssing(t, net.IP{127, 0, 0, 1}, certName)
+	GenCertForTestingPurpose(t, "127.0.0.1", certName, "")
 
 	invalidAddr := "invalid.dns.fqdn-unknown.invalid:100"
 
-	run := func(makeTransp TransportFactory, proxy *transport.ProxyConfig) {
-		transp, err := makeTransp(invalidAddr, proxy)
-		if err != nil {
-			t.Fatalf("failed to generate transport client: %v", err)
-		}
+	run := func(makeTransp TransportFactory, proxy *transport.ProxyConfig) func(*testing.T) {
+		return func(t *testing.T) {
+			transp, err := makeTransp(invalidAddr, proxy)
+			if err != nil {
+				t.Fatalf("failed to generate transport client: %v", err)
+			}
 
-		err = transp.Connect()
-		assert.NotNil(t, err)
+			err = transp.Connect()
+			assert.NotNil(t, err)
+		}
+	}
+
+	factoryTests := func(f TransportFactory) func(*testing.T) {
+		return func(t *testing.T) {
+			t.Run("connect", run(f, nil))
+			t.Run("socks5", run(f, &config))
+		}
 	}
 
 	timeout := 100 * time.Millisecond
-	run(connectTCP(timeout), nil)
-	run(connectTLS(timeout, certName), nil)
-	run(connectTCP(timeout), &config)
-	run(connectTLS(timeout, certName), &config)
+	t.Run("tcp", factoryTests(connectTCP(timeout)))
+	t.Run("tls", factoryTests(connectTLS(timeout, certName)))
 }
 
 func TestTransportClosedOnWriteReadError(t *testing.T) {
@@ -121,9 +140,9 @@ func TestTransportClosedOnWriteReadError(t *testing.T) {
 
 	certName := "ca_test"
 	timeout := 2 * time.Second
-	GenCertsForIPIfMIssing(t, net.IP{127, 0, 0, 1}, certName)
+	GenCertForTestingPurpose(t, "127.0.0.1", certName, "")
 
-	run := func(makeServer MockServerFactory, proxy *transport.ProxyConfig) {
+	testServer(t, &config, func(t *testing.T, makeServer MockServerFactory, proxy *transport.ProxyConfig) {
 		server := makeServer(t, timeout, certName, proxy)
 		defer server.Close()
 
@@ -137,10 +156,23 @@ func TestTransportClosedOnWriteReadError(t *testing.T) {
 		transp.Write([]byte("test3"))
 		_, err = transp.Read(buf[:])
 		assert.NotNil(t, err)
+	})
+}
+
+func testServer(t *testing.T, config *transport.ProxyConfig, run func(*testing.T, MockServerFactory, *transport.ProxyConfig)) {
+	runner := func(f MockServerFactory, c *transport.ProxyConfig) func(t *testing.T) {
+		return func(t *testing.T) {
+			run(t, f, config)
+		}
 	}
 
-	run(NewMockServerTCP, nil)
-	run(NewMockServerTLS, nil)
-	run(NewMockServerTCP, &config)
-	run(NewMockServerTLS, &config)
+	factoryTests := func(f MockServerFactory) func(t *testing.T) {
+		return func(t *testing.T) {
+			t.Run("connect", runner(f, nil))
+			t.Run("socks5", runner(f, config))
+		}
+	}
+
+	t.Run("tcp", factoryTests(NewMockServerTCP))
+	t.Run("tls", factoryTests(NewMockServerTLS))
 }

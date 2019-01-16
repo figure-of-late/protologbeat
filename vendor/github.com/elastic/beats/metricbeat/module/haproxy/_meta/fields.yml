@@ -1,10 +1,9 @@
 - key: haproxy
   title: "HAProxy"
   description: >
-    experimental[]
-
     HAProxy Module
   short_config: false
+  release: ga
   fields:
     - name: haproxy
       type: group

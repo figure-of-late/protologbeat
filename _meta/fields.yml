@@ -6,4 +6,4 @@
       type: long
       required: true
       description: >
-        PLEASE UPDATE DOCUMENTATION
+        Go program which accepts local log messages via TCP/UDP and ships them to a libbeat-supported output

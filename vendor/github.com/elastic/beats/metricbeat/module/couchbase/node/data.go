@@ -1,12 +1,29 @@
+// Licensed to Elasticsearch B.V. under one or more contributor
+// license agreements. See the NOTICE file distributed with
+// this work for additional information regarding copyright
+// ownership. Elasticsearch B.V. licenses this file to you under
+// the Apache License, Version 2.0 (the "License"); you may
+// not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 package node
 
 import (
 	"encoding/json"
-	"io"
+
+	"strconv"
 
 	"github.com/elastic/beats/libbeat/common"
 	"github.com/elastic/beats/libbeat/logp"
-	"strconv"
 )
 
 type NodeSystemStats struct {
@@ -56,10 +73,9 @@ type Data struct {
 	Nodes []Node `json:"nodes"`
 }
 
-func eventsMapping(body io.Reader) []common.MapStr {
-
+func eventsMapping(content []byte) []common.MapStr {
 	var d Data
-	err := json.NewDecoder(body).Decode(&d)
+	err := json.Unmarshal(content, &d)
 	if err != nil {
 		logp.Err("Error: ", err)
 	}
@@ -73,14 +89,14 @@ func eventsMapping(body io.Reader) []common.MapStr {
 			"cmd_get": NodeItem.InterestingStats.CmdGet,
 			"couch": common.MapStr{
 				"docs": common.MapStr{
-					"actual_disk_size": common.MapStr{
+					"disk_size": common.MapStr{
 						"bytes": NodeItem.InterestingStats.CouchDocsActualDiskSize,
 					},
 					"data_size": common.MapStr{
 						"bytes": NodeItem.InterestingStats.CouchDocsDataSize,
 					},
 				},
-				"spacial": common.MapStr{
+				"spatial": common.MapStr{
 					"data_size": common.MapStr{
 						"bytes": NodeItem.InterestingStats.CouchSpatialDataSize,
 					},
@@ -89,7 +105,7 @@ func eventsMapping(body io.Reader) []common.MapStr {
 					},
 				},
 				"views": common.MapStr{
-					"actual_disk_size": common.MapStr{
+					"disk_size": common.MapStr{
 						"bytes": NodeItem.InterestingStats.CouchViewsActualDiskSize,
 					},
 					"data_size": common.MapStr{
@@ -144,5 +160,4 @@ func eventsMapping(body io.Reader) []common.MapStr {
 	}
 
 	return events
-
 }

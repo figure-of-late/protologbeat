@@ -1,3 +1,20 @@
+// Licensed to Elasticsearch B.V. under one or more contributor
+// license agreements. See the NOTICE file distributed with
+// this work for additional information regarding copyright
+// ownership. Elasticsearch B.V. licenses this file to you under
+// the Apache License, Version 2.0 (the "License"); you may
+// not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 package ucfg
 
 import "reflect"
@@ -100,13 +117,50 @@ func typeIsUnpacker(t reflect.Type) (reflect.Value, bool) {
 }
 
 func implementsUnpacker(t reflect.Type) bool {
+	// ucfg.Config or structures that can be casted to ucfg.Config are not
+	// Unpackers.
+	if tConfig.ConvertibleTo(chaseTypePointers(t)) {
+		return false
+	}
+
 	for _, tUnpack := range tUnpackers {
 		if t.Implements(tUnpack) {
 			return true
 		}
 	}
 
-	return false
+	if t.NumMethod() == 0 {
+		return false
+	}
+
+	// test if object has 'Unpack' method
+	method, ok := t.MethodByName("Unpack")
+	if !ok {
+
+		return false
+	}
+
+	// check method input and output parameters to match the ConfigUnpacker interface:
+	// func (to *T) Unpack(cfg *TConfig) error
+	//   with T being the method receiver (input paramter 0)
+	//   and TConfig being the aliased config type to convert to (input parameter 1)
+	paramCountCheck := method.Type.NumIn() == 2 && method.Type.NumOut() == 1
+	if !paramCountCheck {
+		return false
+	}
+	if !method.Type.Out(0).Implements(tError) {
+		// return variable is not compatible to `error` type
+		return false
+	}
+
+	// method receiver is known, check config parameters being compatible
+	tIn := method.Type.In(1)
+	acceptsConfig := tConfig.ConvertibleTo(tIn) || tConfigPtr.ConvertibleTo(tIn)
+	if !acceptsConfig {
+		return false
+	}
+
+	return true
 }
 
 func unpackWith(opts *options, v reflect.Value, with value) Error {
@@ -114,7 +168,8 @@ func unpackWith(opts *options, v reflect.Value, with value) Error {
 	meta := with.meta()
 
 	var err error
-	switch u := v.Interface().(type) {
+	value := v.Interface()
+	switch u := value.(type) {
 	case Unpacker:
 		var reified interface{}
 		if reified, err = with.reify(opts); err == nil {
@@ -156,10 +211,37 @@ func unpackWith(opts *options, v reflect.Value, with value) Error {
 		if c, err = with.toConfig(opts); err == nil {
 			err = u.Unpack(c)
 		}
+
+	default:
+		var c *Config
+		if c, err = with.toConfig(opts); err == nil {
+			err = reflectUnpackWithConfig(v, c)
+		}
+
 	}
 
 	if err != nil {
 		return raisePathErr(err, meta, "", ctx.path("."))
 	}
 	return nil
+}
+
+func reflectUnpackWithConfig(v reflect.Value, c *Config) error {
+	method, _ := v.Type().MethodByName("Unpack")
+	tIn := method.Type.In(1)
+
+	var rc reflect.Value
+	switch {
+	case tConfig.ConvertibleTo(tIn):
+		rc = reflect.ValueOf(*c)
+	case tConfigPtr.ConvertibleTo(tIn):
+		rc = reflect.ValueOf(c)
+	}
+
+	results := method.Func.Call([]reflect.Value{v, rc.Convert(tIn)})
+	ifc := results[0].Convert(tError).Interface()
+	if ifc == nil {
+		return nil
+	}
+	return ifc.(error)
 }

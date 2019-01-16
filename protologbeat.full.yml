@@ -5,42 +5,42 @@
 protologbeat:
   # Address on which the process will listen
   address: "127.0.0.1"
-  
+
   # Port on which the process will listen
   #port: 5000
-  
+
   # Protocol on which to listen
   #protocol: udp
-  
+
   # Maxium message size in bytes
   #max_msg_size: 4096
-  
+
   # Enable accepting on JSON formated messages
   #json_mode: true
-  
+
   # Default elasticsearch type to use if no type is present in the message
   #default_es_log_type: protologbeat
-  
+
   # Wether to place the parsed json data at the root level or nested in a 'log' object
   #merge_fields_to_root: true
-  
+
   # Set process to only act as a syslog message reciever
   #enable_syslog_format_only: false
-  
+
   # Set process to receive only GELF formated messages
   #enable_gelf: false
 
   # Enable json validation with schemas
   #enable_json_validation: false
-  
+
   # Enforce json validation for ALL types being logged
   #validate_all_json_types: false
-  
+
   # List of elasticsarch types and their json schema
   #json_schema:
   #  email_contact: "/path/to/schema1.json"
   #  stock_item: "/path/to/schema2.json"
-  
+
   # Enable additional debugging messages
   #debug: true
 
@@ -192,14 +192,6 @@ output.elasticsearch:
 
   # Overwrite existing template
   #template.overwrite: false
-
-  # If set to true, protologbeat checks the Elasticsearch version at connect time, and if it
-  # is 2.x, it loads the file specified by the template.versions.2x.path setting. The
-  # default is true.
-  #template.versions.2x.enabled: true
-
-  # Path to the Elasticsearch 2.x version of the template file.
-  #template.versions.2x.path: "${path.config}/protologbeat.template-es2x.json"
 
   # Use SSL settings for HTTPS. Default is true.
   #ssl.enabled: true

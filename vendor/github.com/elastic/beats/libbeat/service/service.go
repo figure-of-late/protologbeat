@@ -1,8 +1,30 @@
+// Licensed to Elasticsearch B.V. under one or more contributor
+// license agreements. See the NOTICE file distributed with
+// this work for additional information regarding copyright
+// ownership. Elasticsearch B.V. licenses this file to you under
+// the Apache License, Version 2.0 (the "License"); you may
+// not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 package service
 
 import (
+	"context"
+	"expvar"
 	"flag"
+	"fmt"
 	"log"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"runtime"
@@ -11,17 +33,13 @@ import (
 	"syscall"
 
 	"github.com/elastic/beats/libbeat/logp"
-
-	"net/http"
-
-	// blank pprof import to load HTTP handler for debugging endpoint
-	_ "net/http/pprof"
+	"github.com/elastic/beats/libbeat/monitoring"
 )
 
 // HandleSignals manages OS signals that ask the service/daemon to stop.
 // The stopFunction should break the loop in the Beat so that
 // the service shut downs gracefully.
-func HandleSignals(stopFunction func()) {
+func HandleSignals(stopFunction func(), cancel context.CancelFunc) {
 	var callback sync.Once
 
 	// On ^C or SIGTERM, gracefully stop the sniffer
@@ -30,6 +48,7 @@ func HandleSignals(stopFunction func()) {
 	go func() {
 		<-sigc
 		logp.Debug("service", "Received sigterm/sigint, stopping")
+		cancel()
 		callback.Do(stopFunction)
 	}()
 
@@ -70,11 +89,47 @@ func BeforeRun() {
 	}
 
 	if *httpprof != "" {
+		logp.Info("start pprof endpoint")
 		go func() {
-			logp.Info("start pprof endpoint")
-			logp.Info("finished pprof endpoint: %v", http.ListenAndServe(*httpprof, nil))
+			mux := http.NewServeMux()
+
+			// register pprof handler
+			mux.HandleFunc("/debug/pprof/", func(w http.ResponseWriter, r *http.Request) {
+				http.DefaultServeMux.ServeHTTP(w, r)
+			})
+
+			// register metrics handler
+			mux.HandleFunc("/debug/vars", metricsHandler)
+
+			endpoint := http.ListenAndServe(*httpprof, mux)
+			logp.Info("finished pprof endpoint: %v", endpoint)
 		}()
 	}
+}
+
+// report expvar and all libbeat/monitoring metrics
+func metricsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+	first := true
+	report := func(key string, value interface{}) {
+		if !first {
+			fmt.Fprintf(w, ",\n")
+		}
+		first = false
+		if str, ok := value.(string); ok {
+			fmt.Fprintf(w, "%q: %q", key, str)
+		} else {
+			fmt.Fprintf(w, "%q: %v", key, value)
+		}
+	}
+
+	fmt.Fprintf(w, "{\n")
+	monitoring.Do(monitoring.Full, report)
+	expvar.Do(func(kv expvar.KeyValue) {
+		report(kv.Key, kv.Value)
+	})
+	fmt.Fprintf(w, "\n}\n")
 }
 
 // Cleanup handles cleaning up the runtime and OS environments. This includes

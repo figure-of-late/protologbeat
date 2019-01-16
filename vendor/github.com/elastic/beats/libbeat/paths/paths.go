@@ -1,3 +1,20 @@
+// Licensed to Elasticsearch B.V. under one or more contributor
+// license agreements. See the NOTICE file distributed with
+// this work for additional information regarding copyright
+// ownership. Elasticsearch B.V. licenses this file to you under
+// the Apache License, Version 2.0 (the "License"); you may
+// not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 // Package paths provides a common way to handle paths
 // configuration for all Beats.
 //
@@ -55,7 +72,7 @@ func New() *Path {
 
 // InitPaths sets the default paths in the configuration based on CLI flags,
 // configuration file and default values. It also tries to create the data
-// path with mode 0755 and returns an error on failure.
+// path with mode 0750 and returns an error on failure.
 func (paths *Path) InitPaths(cfg *Path) error {
 	err := paths.initPaths(cfg)
 	if err != nil {
@@ -63,7 +80,7 @@ func (paths *Path) InitPaths(cfg *Path) error {
 	}
 
 	// make sure the data path exists
-	err = os.MkdirAll(paths.Data, 0755)
+	err = os.MkdirAll(paths.Data, 0750)
 	if err != nil {
 		return fmt.Errorf("Failed to create data path %s: %v", paths.Data, err)
 	}
@@ -73,7 +90,7 @@ func (paths *Path) InitPaths(cfg *Path) error {
 
 // InitPaths sets the default paths in the configuration based on CLI flags,
 // configuration file and default values. It also tries to create the data
-// path with mode 0755 and returns an error on failure.
+// path with mode 0750 and returns an error on failure.
 func InitPaths(cfg *Path) error {
 	return Paths.InitPaths(cfg)
 }
@@ -127,6 +144,7 @@ func (paths *Path) Resolve(fileType FileType, path string) string {
 // Resolve resolves a path to a location in one of the default
 // folders. For example, Resolve(Home, "test") returns an absolute
 // path for "test" in the home path.
+// In case path is already an absolute path, the path itself is returned.
 func Resolve(fileType FileType, path string) string {
 	return Paths.Resolve(fileType, path)
 }

@@ -1,7 +1,7 @@
 FROM alpine
 
 # Misc
-LABEL Description="Protologbeat Docker image based on Alpine" Vendor="Alain Lefebvre" 
+LABEL Description="Protologbeat Docker image based on Alpine" Vendor="Alain Lefebvre"
 MAINTAINER Alain Lefebvre <hartfordfive@gmail.com>
 
 ARG VERSION
@@ -29,7 +29,6 @@ RUN set -ex ;\
 ENV PATH=/opt/protologbeat:$PATH
 
 COPY protologbeat-docker.yml /opt/protologbeat/conf/protologbeat.yml
-COPY protologbeat.template-es2x.json /opt/protologbeat
 COPY protologbeat.template.json /opt/protologbeat
 
 WORKDIR /opt/protologbeat
