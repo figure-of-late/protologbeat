@@ -184,6 +184,10 @@ If {kib} is not running on `localhost:5061`, you must also adjust the
 Exports the index template to stdout. You can specify the `--es.version` and
 `--index` flags to further define what gets exported.
 
+[[ilm-policy-subcommand]]
+*`ilm-policy`*::
+Exports ILM policy to stdout.
+
 *FLAGS*
 
 *`--es.version VERSION`*::
@@ -833,7 +837,7 @@ Sets the path for log files. See the <<directory-layout>> section for details.
 *`--strict.perms`*::
 Sets strict permission checking on configuration files. The default is
 `-strict.perms=true`. See
-{libbeat}/config-file-permissions.html[Config file ownership and permissions] in
+{beats-ref}/config-file-permissions.html[Config file ownership and permissions] in
 the _Beats Platform Reference_ for more information.
 
 *`-v, --v`*::
