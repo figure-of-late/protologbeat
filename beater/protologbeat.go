@@ -8,8 +8,8 @@ import (
 	"github.com/elastic/beats/libbeat/common"
 	"github.com/elastic/beats/libbeat/logp"
 
-	"github.com/figure-of-late/protologbeat/config"
-	"github.com/figure-of-late/protologbeat/protolog"
+	"github.com/mmguero/protologbeat/config"
+	"github.com/mmguero/protologbeat/protolog"
 )
 
 type Protologbeat struct {
