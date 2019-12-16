@@ -27,20 +27,6 @@ var params = map[string]string{
 	"human": "false",
 }
 
-var stateLookup = map[string]State{
-	"inactive": Inactive,
-	"active":   Active,
-}
-
-var licenseLookup = map[string]LicenseType{
-	"oss":      OSS,
-	"trial":    Trial,
-	"standard": Standard,
-	"basic":    Basic,
-	"gold":     Gold,
-	"platinum": Platinum,
-}
-
 // UnmarshalJSON takes a bytes array and convert it to the appropriate license type.
 func (t *LicenseType) UnmarshalJSON(b []byte) error {
 	if len(b) <= 2 {
@@ -124,12 +110,12 @@ func (f *ElasticFetcher) Fetch() (*License, error) {
 		return nil, errors.New("unauthorized access, could not connect to the xpack endpoint, verify your credentials")
 	}
 
-	if status != http.StatusOK {
-		return nil, fmt.Errorf("error from server, response code: %d", status)
-	}
-
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve the license information from the cluster")
+	}
+
+	if status != http.StatusOK {
+		return nil, fmt.Errorf("error from server, response code: %d", status)
 	}
 
 	license, err := f.parseJSON(body)

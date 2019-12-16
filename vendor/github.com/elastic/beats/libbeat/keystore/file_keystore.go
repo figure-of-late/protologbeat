@@ -389,7 +389,7 @@ func (k *FileKeystore) checkPermissions(f string) error {
 	perm := info.Mode().Perm()
 
 	if fileUID != 0 && euid != fileUID {
-		return fmt.Errorf(`config file ("%v") must be owned by the beat user `+
+		return fmt.Errorf(`config file ("%v") must be owned by the user identifier `+
 			`(uid=%v) or root`, f, euid)
 	}
 
@@ -413,6 +413,11 @@ func (k *FileKeystore) Package() ([]byte, error) {
 	k.Lock()
 	defer k.Unlock()
 	return k.loadRaw()
+}
+
+// ConfiguredPath returns the path to the keystore.
+func (k *FileKeystore) ConfiguredPath() string {
+	return k.Path
 }
 
 func (k *FileKeystore) hashPassword(password, salt []byte) []byte {

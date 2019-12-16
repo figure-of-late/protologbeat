@@ -1,6 +1,7 @@
 from filebeat import BaseTest
 import socket
 import ssl
+import unittest
 from os import path
 from nose.tools import raises, assert_raises
 
@@ -268,5 +269,4 @@ class Test(BaseTest):
 
     def assert_output(self, output):
         assert len(output) == 2
-        assert output[0]["prospector.type"] == "tcp"
         assert output[0]["input.type"] == "tcp"

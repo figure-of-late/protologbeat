@@ -20,7 +20,16 @@ package mage
 import (
 	"github.com/pkg/errors"
 
-	"github.com/elastic/beats/dev-tools/mage"
+	devtools "github.com/elastic/beats/dev-tools/mage"
+)
+
+// PackagingFlavor specifies the type of packaging (OSS vs X-Pack).
+type PackagingFlavor uint8
+
+// Packaging flavors.
+const (
+	OSSPackaging PackagingFlavor = iota
+	XPackPackaging
 )
 
 // CustomizePackaging modifies the package specs to use templated config files
@@ -28,18 +37,22 @@ import (
 //
 // Customizations specific to Auditbeat:
 // - Include audit.rules.d directory in packages.
-func CustomizePackaging() {
+func CustomizePackaging(pkgFlavor PackagingFlavor) {
 	var (
-		shortConfig = mage.PackageFile{
+		shortConfig = devtools.PackageFile{
 			Mode:   0600,
 			Source: "{{.PackageDir}}/auditbeat.yml",
-			Dep:    generateShortConfig,
+			Dep: func(spec devtools.PackageSpec) error {
+				return generateConfig(pkgFlavor, devtools.ShortConfigType, spec)
+			},
 			Config: true,
 		}
-		referenceConfig = mage.PackageFile{
+		referenceConfig = devtools.PackageFile{
 			Mode:   0644,
 			Source: "{{.PackageDir}}/auditbeat.reference.yml",
-			Dep:    generateReferenceConfig,
+			Dep: func(spec devtools.PackageSpec) error {
+				return generateConfig(pkgFlavor, devtools.ReferenceConfigType, spec)
+			},
 		}
 	)
 
@@ -47,41 +60,41 @@ func CustomizePackaging() {
 		sampleRulesSource        = "{{.PackageDir}}/audit.rules.d/sample-rules.conf.disabled"
 		defaultSampleRulesTarget = "audit.rules.d/sample-rules.conf.disabled"
 	)
-	sampleRules := mage.PackageFile{
+	sampleRules := devtools.PackageFile{
 		Mode:   0644,
 		Source: sampleRulesSource,
-		Dep: func(spec mage.PackageSpec) error {
+		Dep: func(spec devtools.PackageSpec) error {
 			if spec.OS != "linux" {
 				return errors.New("audit rules are for linux only")
 			}
 
 			// Origin rule file.
 			params := map[string]interface{}{"ArchBits": archBits}
-			origin := mage.OSSBeatDir(
+			origin := devtools.OSSBeatDir(
 				"module/auditd/_meta/audit.rules.d",
 				spec.MustExpand("sample-rules-linux-{{call .ArchBits .GOARCH}}bit.conf", params),
 			)
 
-			if err := mage.Copy(origin, spec.MustExpand(sampleRulesSource)); err != nil {
+			if err := devtools.Copy(origin, spec.MustExpand(sampleRulesSource)); err != nil {
 				return errors.Wrap(err, "failed to copy sample rules")
 			}
 			return nil
 		},
 	}
 
-	for _, args := range mage.Packages {
+	for _, args := range devtools.Packages {
 		for _, pkgType := range args.Types {
 			sampleRulesTarget := defaultSampleRulesTarget
 
 			switch pkgType {
-			case mage.TarGz, mage.Zip:
+			case devtools.TarGz, devtools.Zip:
 				args.Spec.ReplaceFile("{{.BeatName}}.yml", shortConfig)
 				args.Spec.ReplaceFile("{{.BeatName}}.reference.yml", referenceConfig)
-			case mage.Deb, mage.RPM, mage.DMG:
+			case devtools.Deb, devtools.RPM, devtools.DMG:
 				args.Spec.ReplaceFile("/etc/{{.BeatName}}/{{.BeatName}}.yml", shortConfig)
 				args.Spec.ReplaceFile("/etc/{{.BeatName}}/{{.BeatName}}.reference.yml", referenceConfig)
 				sampleRulesTarget = "/etc/{{.BeatName}}/" + defaultSampleRulesTarget
-			case mage.Docker:
+			case devtools.Docker:
 				args.Spec.ExtraVar("user", "root")
 			default:
 				panic(errors.Errorf("unhandled package type: %v", pkgType))
@@ -95,20 +108,20 @@ func CustomizePackaging() {
 	}
 }
 
-func generateReferenceConfig(spec mage.PackageSpec) error {
-	params := map[string]interface{}{
-		"Reference": true,
-		"ArchBits":  archBits,
+func generateConfig(pkgFlavor PackagingFlavor, ct devtools.ConfigFileType, spec devtools.PackageSpec) error {
+	var args devtools.ConfigFileParams
+	switch pkgFlavor {
+	case OSSPackaging:
+		args = OSSConfigFileParams()
+	case XPackPackaging:
+		args = XPackConfigFileParams()
+	default:
+		panic(errors.Errorf("Invalid packaging flavor (either oss or xpack): %v", pkgFlavor))
 	}
-	return spec.ExpandFile(referenceConfigTemplate,
-		"{{.PackageDir}}/auditbeat.reference.yml", params)
-}
 
-func generateShortConfig(spec mage.PackageSpec) error {
-	params := map[string]interface{}{
-		"Reference": false,
-		"ArchBits":  archBits,
-	}
-	return spec.ExpandFile(shortConfigTemplate,
-		"{{.PackageDir}}/auditbeat.yml", params)
+	// PackageDir isn't exported but we can grab it's value this way.
+	packageDir := spec.MustExpand("{{.PackageDir}}")
+	args.ExtraVars["GOOS"] = spec.OS
+	args.ExtraVars["GOARCH"] = spec.MustExpand("{{.GOARCH}}")
+	return devtools.Config(ct, args, packageDir)
 }

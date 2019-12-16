@@ -18,22 +18,40 @@
 package export
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 
 	"github.com/elastic/beats/libbeat/cmd/instance"
+	"github.com/elastic/beats/libbeat/idxmgmt"
+	"github.com/elastic/beats/libbeat/idxmgmt/ilm"
 )
 
 // GenGetILMPolicyCmd is the command used to export the ilm policy.
-func GenGetILMPolicyCmd() *cobra.Command {
+func GenGetILMPolicyCmd(settings instance.Settings) *cobra.Command {
 	genTemplateConfigCmd := &cobra.Command{
 		Use:   "ilm-policy",
 		Short: "Export ILM policy",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println(instance.ILMPolicy.StringToPrint())
+			version, _ := cmd.Flags().GetString("es.version")
+			dir, _ := cmd.Flags().GetString("dir")
+
+			if settings.ILM == nil {
+				settings.ILM = ilm.StdSupport
+			}
+			b, err := instance.NewInitializedBeat(settings)
+			if err != nil {
+				fatalfInitCmd(err)
+			}
+
+			clientHandler := idxmgmt.NewFileClientHandler(newIdxmgmtClient(dir, version))
+			idxManager := b.IdxSupporter.Manager(clientHandler, idxmgmt.BeatsAssets(b.Fields))
+			if err := idxManager.Setup(idxmgmt.LoadModeDisabled, idxmgmt.LoadModeForce); err != nil {
+				fatalf("Error exporting ilm-policy: %+v.", err)
+			}
 		},
 	}
+
+	genTemplateConfigCmd.Flags().String("es.version", settings.Version, "Elasticsearch version")
+	genTemplateConfigCmd.Flags().String("dir", "", "Specify directory for printing policy files. By default policies are printed to stdout.")
 
 	return genTemplateConfigCmd
 }

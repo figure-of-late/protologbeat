@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/elastic/beats/libbeat/common"
 )
@@ -35,7 +36,7 @@ func TestNumberOfRoutingShards(t *testing.T) {
 
 	// Test it exists in 6.1
 	ver := common.MustNewVersion("6.1.0")
-	template, err := New(beatVersion, beatName, *ver, config)
+	template, err := New(beatVersion, beatName, *ver, config, false)
 	assert.NoError(t, err)
 
 	data := template.Generate(nil, nil)
@@ -46,7 +47,7 @@ func TestNumberOfRoutingShards(t *testing.T) {
 
 	// Test it does not exist in 6.0
 	ver = common.MustNewVersion("6.0.0")
-	template, err = New(beatVersion, beatName, *ver, config)
+	template, err = New(beatVersion, beatName, *ver, config, false)
 	assert.NoError(t, err)
 
 	data = template.Generate(nil, nil)
@@ -67,7 +68,7 @@ func TestNumberOfRoutingShardsOverwrite(t *testing.T) {
 
 	// Test it exists in 6.1
 	ver := common.MustNewVersion("6.1.0")
-	template, err := New(beatVersion, beatName, *ver, config)
+	template, err := New(beatVersion, beatName, *ver, config, false)
 	assert.NoError(t, err)
 
 	data := template.Generate(nil, nil)
@@ -75,4 +76,19 @@ func TestNumberOfRoutingShardsOverwrite(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, 5, shards.(int))
+}
+
+func TestTemplate(t *testing.T) {
+	beatVersion := "6.6.0"
+	beatName := "testbeat"
+	ver := common.MustNewVersion("6.6.0")
+	template, err := New(beatVersion, beatName, *ver, DefaultConfig(), false)
+	require.NoError(t, err)
+
+	data := template.Generate(common.MapStr{}, nil)
+	assert.Equal(t, []string{"testbeat-6.6.0-*"}, data["index_patterns"])
+	assert.Equal(t, 1, data["order"])
+	meta, err := data.GetValue("mappings.doc._meta")
+	require.NoError(t, err)
+	assert.Equal(t, common.MapStr{"beat": "testbeat", "version": "6.6.0"}, meta)
 }

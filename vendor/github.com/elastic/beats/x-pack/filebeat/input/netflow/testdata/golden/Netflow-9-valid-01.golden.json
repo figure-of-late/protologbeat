@@ -58,13 +58,16 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
+          "bytes": 76,
           "ip": "172.16.32.100",
           "locality": "private",
+          "packets": 1,
           "port": 123
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2015-10-08T19:04:30Z",
@@ -123,13 +126,16 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
+          "bytes": 76,
           "ip": "172.16.32.248",
           "locality": "private",
+          "packets": 1,
           "port": 123
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2015-10-08T19:04:30Z",
@@ -188,13 +194,16 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
+          "bytes": 76,
           "ip": "172.16.32.100",
           "locality": "private",
+          "packets": 1,
           "port": 123
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2015-10-08T19:04:30Z",
@@ -253,13 +262,16 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
+          "bytes": 76,
           "ip": "172.16.32.201",
           "locality": "private",
+          "packets": 1,
           "port": 123
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2015-10-08T19:04:30Z",
@@ -318,13 +330,16 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
+          "bytes": 76,
           "ip": "172.16.32.100",
           "locality": "private",
+          "packets": 1,
           "port": 123
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2015-10-08T19:04:30Z",
@@ -383,13 +398,16 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
+          "bytes": 76,
           "ip": "172.16.32.202",
           "locality": "private",
+          "packets": 1,
           "port": 123
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2015-10-08T19:04:30Z",
@@ -446,11 +464,14 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
+          "bytes": 672,
+          "packets": 7,
           "port": 0
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     }
   ]
 }

@@ -22,6 +22,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/elastic/beats/heartbeat/eventext"
+	"github.com/elastic/beats/heartbeat/monitors/jobs"
 	"github.com/elastic/beats/heartbeat/scheduler"
 	"github.com/elastic/beats/heartbeat/scheduler/schedule"
 	"github.com/elastic/beats/libbeat/beat"
@@ -35,7 +37,7 @@ type taskCanceller func() error
 // configuredJob represents a job combined with its config and any
 // subsequent processors.
 type configuredJob struct {
-	job        Job
+	job        jobs.Job
 	config     jobConfig
 	monitor    *Monitor
 	processors *processors.Processors
@@ -43,7 +45,7 @@ type configuredJob struct {
 	client     beat.Client
 }
 
-func newConfiguredJob(job Job, config jobConfig, monitor *Monitor) (*configuredJob, error) {
+func newConfiguredJob(job jobs.Job, config jobConfig, monitor *Monitor) (*configuredJob, error) {
 	t := &configuredJob{
 		job:     job,
 		config:  config,
@@ -66,13 +68,16 @@ func newConfiguredJob(job Job, config jobConfig, monitor *Monitor) (*configuredJ
 
 // jobConfig represents fields needed to execute a single job.
 type jobConfig struct {
-	Name     string             `config:"name"`
+	Name     string             `config:"pluginName"`
 	Type     string             `config:"type"`
 	Schedule *schedule.Schedule `config:"schedule" validate:"required"`
 
 	// Fields and tags to add to monitor.
 	EventMetadata common.EventMetadata    `config:",inline"`
 	Processors    processors.PluginConfig `config:"processors"`
+
+	// KeepNull determines whether published events will keep null values or omit them.
+	KeepNull bool `config:"keep_null"`
 }
 
 // ProcessorsError is used to indicate situations when processors could not be loaded.
@@ -83,62 +88,14 @@ func (e ProcessorsError) Error() string {
 	return fmt.Sprintf("could not load monitor processors: %s", e.root)
 }
 
-func (t *configuredJob) prepareSchedulerJob(meta common.MapStr, job Job) scheduler.TaskFunc {
+func (t *configuredJob) prepareSchedulerJob(job jobs.Job) scheduler.TaskFunc {
 	return func() []scheduler.TaskFunc {
-		event := &beat.Event{
-			Fields: common.MapStr{},
-		}
-		next, err := job.Run(event)
-		hasContinuations := len(next) > 0
-
-		if err != nil {
-			logp.Err("Job %v failed with: ", err)
-		}
-
-		if event != nil && event.Fields != nil {
-			MergeEventFields(event, meta)
-			// If continuations are present we defensively publish a clone of the event
-			// in the chance that the event shares underlying data with the events for continuations
-			// This prevents races where the pipeline publish could accidentally alter multiple events.
-			if hasContinuations {
-				clone := beat.Event{
-					Timestamp: event.Timestamp,
-					Meta:      event.Meta.Clone(),
-					Fields:    event.Fields.Clone(),
-				}
-				t.client.Publish(clone)
-			} else {
-				// no clone needed if no continuations
-				t.client.Publish(*event)
-			}
-		}
-
-		if len(next) == 0 {
-			return nil
-		}
-
-		continuations := make([]scheduler.TaskFunc, len(next))
-		for i, n := range next {
-			continuations[i] = t.prepareSchedulerJob(meta, n)
-		}
-		return continuations
+		return runPublishJob(job, t.client)
 	}
 }
 
 func (t *configuredJob) makeSchedulerTaskFunc() scheduler.TaskFunc {
-	name := t.config.Name
-	if name == "" {
-		name = t.config.Type
-	}
-
-	meta := common.MapStr{
-		"monitor": common.MapStr{
-			"name": name,
-			"type": t.config.Type,
-		},
-	}
-
-	return t.prepareSchedulerJob(meta, t.job)
+	return t.prepareSchedulerJob(t.job)
 }
 
 // Start schedules this configuredJob for execution.
@@ -151,9 +108,12 @@ func (t *configuredJob) Start() {
 	}
 
 	t.client, err = t.monitor.pipelineConnector.ConnectWith(beat.ClientConfig{
-		EventMetadata: t.config.EventMetadata,
-		Processor:     t.processors,
-		Fields:        fields,
+		Processing: beat.ProcessingConfig{
+			EventMetadata: t.config.EventMetadata,
+			Processor:     t.processors,
+			KeepNull:      t.config.KeepNull,
+			Fields:        fields,
+		},
 	})
 	if err != nil {
 		logp.Err("could not start monitor: %v", err)
@@ -161,7 +121,7 @@ func (t *configuredJob) Start() {
 	}
 
 	tf := t.makeSchedulerTaskFunc()
-	t.cancelFn, err = t.monitor.scheduler.Add(t.config.Schedule, t.job.Name(), tf)
+	t.cancelFn, err = t.monitor.scheduler.Add(t.config.Schedule, t.monitor.id, tf)
 	if err != nil {
 		logp.Err("could not start monitor: %v", err)
 	}
@@ -175,4 +135,51 @@ func (t *configuredJob) Stop() {
 	if t.client != nil {
 		t.client.Close()
 	}
+}
+
+func runPublishJob(job jobs.Job, client beat.Client) []scheduler.TaskFunc {
+	event := &beat.Event{
+		Fields: common.MapStr{},
+	}
+
+	conts, err := job(event)
+	if err != nil {
+		logp.Err("Job %v failed with: ", err)
+	}
+
+	hasContinuations := len(conts) > 0
+
+	if event.Fields != nil && !eventext.IsEventCancelled(event) {
+		// If continuations are present we defensively publish a clone of the event
+		// in the chance that the event shares underlying data with the events for continuations
+		// This prevents races where the pipeline publish could accidentally alter multiple events.
+		if hasContinuations {
+			clone := beat.Event{
+				Timestamp: event.Timestamp,
+				Meta:      event.Meta.Clone(),
+				Fields:    event.Fields.Clone(),
+			}
+			client.Publish(clone)
+		} else {
+			// no clone needed if no continuations
+			client.Publish(*event)
+		}
+	}
+
+	if !hasContinuations {
+		return nil
+	}
+
+	contTasks := make([]scheduler.TaskFunc, len(conts))
+	for i, cont := range conts {
+		// Move the continuation into the local block scope
+		// This is important since execution is deferred
+		// Without this only the last continuation will be executed len(conts) times
+		localCont := cont
+
+		contTasks[i] = func() []scheduler.TaskFunc {
+			return runPublishJob(localCont, client)
+		}
+	}
+	return contTasks
 }

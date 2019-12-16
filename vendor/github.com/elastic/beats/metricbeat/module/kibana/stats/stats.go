@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/elastic/beats/metricbeat/helper"
-	"github.com/elastic/beats/metricbeat/helper/elastic"
 	"github.com/elastic/beats/metricbeat/mb"
 	"github.com/elastic/beats/metricbeat/mb/parse"
 	"github.com/elastic/beats/metricbeat/module/kibana"
@@ -128,61 +127,83 @@ func New(base mb.BaseMetricSet) (mb.MetricSet, error) {
 // Fetch methods implements the data gathering and data conversion to the right format
 // It returns the event which is then forward to the output. In case of an error, a
 // descriptive error must be returned.
-func (m *MetricSet) Fetch(r mb.ReporterV2) {
+func (m *MetricSet) Fetch(r mb.ReporterV2) error {
 	now := time.Now()
 
 	err := m.fetchStats(r, now)
 	if err != nil {
 		if m.XPackEnabled {
-			m.Log.Error(err)
-		} else {
-			elastic.ReportAndLogError(err, r, m.Log)
+			m.Logger().Error(err)
+			return nil
 		}
-		return
+		return err
 	}
 
 	if m.XPackEnabled {
-		err = m.fetchSettings(r, now)
-		if err != nil {
-			m.Log.Error(err)
-		}
+		m.fetchSettings(r, now)
 	}
+
+	return nil
 }
 
 func (m *MetricSet) fetchStats(r mb.ReporterV2, now time.Time) error {
+
+	var content []byte
+	var err error
+
 	// Collect usage stats only once every usageCollectionPeriod
 	if m.isUsageExcludable {
 		origURI := m.statsHTTP.GetURI()
 		defer m.statsHTTP.SetURI(origURI)
 
 		shouldCollectUsage := m.shouldCollectUsage(now)
+		m.statsHTTP.SetURI(origURI + "&exclude_usage=" + strconv.FormatBool(!shouldCollectUsage))
+
+		content, err = m.statsHTTP.FetchContent()
+		if err != nil {
+			return err
+		}
+
 		if shouldCollectUsage {
 			m.usageLastCollectedOn = now
 		}
-		m.statsHTTP.SetURI(origURI + "&exclude_usage=" + strconv.FormatBool(!shouldCollectUsage))
-	}
-
-	content, err := m.statsHTTP.FetchContent()
-	if err != nil {
-		return err
+	} else {
+		content, err = m.statsHTTP.FetchContent()
+		if err != nil {
+			return err
+		}
 	}
 
 	if m.XPackEnabled {
 		intervalMs := m.calculateIntervalMs()
-		return eventMappingStatsXPack(r, intervalMs, now, content)
+		err = eventMappingStatsXPack(r, intervalMs, now, content)
+		if err != nil {
+			// Since this is an x-pack code path, we log the error but don't
+			// return it. Otherwise it would get reported into `metricbeat-*`
+			// indices.
+			m.Logger().Error(err)
+			return nil
+		}
 	} else {
 		return eventMapping(r, content)
 	}
+
+	return nil
 }
 
-func (m *MetricSet) fetchSettings(r mb.ReporterV2, now time.Time) error {
+func (m *MetricSet) fetchSettings(r mb.ReporterV2, now time.Time) {
 	content, err := m.settingsHTTP.FetchContent()
 	if err != nil {
-		return err
+		m.Logger().Error(err)
+		return
 	}
 
 	intervalMs := m.calculateIntervalMs()
-	return eventMappingSettingsXPack(r, intervalMs, now, content)
+	err = eventMappingSettingsXPack(r, intervalMs, now, content)
+	if err != nil {
+		m.Logger().Error(err)
+		return
+	}
 }
 
 func (m *MetricSet) calculateIntervalMs() int64 {

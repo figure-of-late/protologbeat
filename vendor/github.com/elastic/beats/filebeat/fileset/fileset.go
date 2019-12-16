@@ -35,8 +35,10 @@ import (
 	"text/template"
 
 	errw "github.com/pkg/errors"
+	"gopkg.in/yaml.v2"
 
 	"github.com/elastic/beats/libbeat/common"
+	"github.com/elastic/beats/libbeat/common/cfgwarn"
 	"github.com/elastic/beats/libbeat/logp"
 	mlimporter "github.com/elastic/beats/libbeat/ml-importer"
 )
@@ -110,7 +112,6 @@ type manifest struct {
 	Vars            []map[string]interface{} `config:"var"`
 	IngestPipeline  []string                 `config:"ingest_pipeline"`
 	Input           string                   `config:"input"`
-	Prospector      string                   `config:"prospector"`
 	MachineLearning []struct {
 		Name       string `config:"name"`
 		Job        string `config:"job"`
@@ -123,14 +124,16 @@ type manifest struct {
 }
 
 func newManifest(cfg *common.Config) (*manifest, error) {
+	if err := cfgwarn.CheckRemoved6xSetting(cfg, "prospector"); err != nil {
+		return nil, err
+	}
+
 	var manifest manifest
 	err := cfg.Unpack(&manifest)
 	if err != nil {
 		return nil, err
 	}
-	if manifest.Prospector != "" {
-		manifest.Input = manifest.Prospector
-	}
+
 	return &manifest, nil
 }
 
@@ -349,6 +352,11 @@ func (fs *Fileset) getInputConfig() (*common.Config, error) {
 		return nil, fmt.Errorf("Error reading input config: %v", err)
 	}
 
+	cfg, err = mergePathDefaults(cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	// overrides
 	if len(fs.fcfg.Input) > 0 {
 		overrides, err := common.NewConfigFrom(fs.fcfg.Input)
@@ -419,15 +427,28 @@ func (fs *Fileset) GetPipelines(esVersion common.Version) (pipelines []pipeline,
 			return nil, fmt.Errorf("Error reading pipeline file %s: %v", path, err)
 		}
 
-		jsonString, err := applyTemplate(vars, string(strContents), true)
+		encodedString, err := applyTemplate(vars, string(strContents), true)
 		if err != nil {
 			return nil, fmt.Errorf("Error interpreting the template of the ingest pipeline: %v", err)
 		}
 
 		var content map[string]interface{}
-		err = json.Unmarshal([]byte(jsonString), &content)
-		if err != nil {
-			return nil, fmt.Errorf("Error JSON decoding the pipeline file: %s: %v", path, err)
+		switch extension := strings.ToLower(filepath.Ext(path)); extension {
+		case ".json":
+			if err = json.Unmarshal([]byte(encodedString), &content); err != nil {
+				return nil, fmt.Errorf("Error JSON decoding the pipeline file: %s: %v", path, err)
+			}
+		case ".yaml", ".yml":
+			if err = yaml.Unmarshal([]byte(encodedString), &content); err != nil {
+				return nil, fmt.Errorf("Error YAML decoding the pipeline file: %s: %v", path, err)
+			}
+			newContent, err := fixYAMLMaps(content)
+			if err != nil {
+				return nil, fmt.Errorf("Failed to sanitize the YAML pipeline file: %s: %v", path, err)
+			}
+			content = newContent.(map[string]interface{})
+		default:
+			return nil, fmt.Errorf("Unsupported extension '%s' for pipeline file: %s", extension, path)
 		}
 
 		pipelineID := fs.pipelineIDs[idx]
@@ -440,6 +461,40 @@ func (fs *Fileset) GetPipelines(esVersion common.Version) (pipelines []pipeline,
 	}
 
 	return pipelines, nil
+}
+
+// This function recursively converts maps with interface{} keys, as returned by
+// yaml.Unmarshal, to maps of string keys, as expected by the json encoder
+// that will be used when delivering the pipeline to Elasticsearch.
+// Will return an error when something other than a string is used as a key.
+func fixYAMLMaps(elem interface{}) (_ interface{}, err error) {
+	switch v := elem.(type) {
+	case map[interface{}]interface{}:
+		result := make(map[string]interface{}, len(v))
+		for key, value := range v {
+			keyS, ok := key.(string)
+			if !ok {
+				return nil, fmt.Errorf("key '%v' is not string but %T", key, key)
+			}
+			if result[keyS], err = fixYAMLMaps(value); err != nil {
+				return nil, err
+			}
+		}
+		return result, nil
+	case map[string]interface{}:
+		for key, value := range v {
+			if v[key], err = fixYAMLMaps(value); err != nil {
+				return nil, err
+			}
+		}
+	case []interface{}:
+		for idx, value := range v {
+			if v[idx], err = fixYAMLMaps(value); err != nil {
+				return nil, err
+			}
+		}
+	}
+	return elem, nil
 }
 
 // formatPipelineID generates the ID to be used for the pipeline ID in Elasticsearch
@@ -470,7 +525,7 @@ func (fs *Fileset) GetMLConfigs() []mlimporter.MLConfig {
 	var mlConfigs []mlimporter.MLConfig
 	for _, ml := range fs.manifest.MachineLearning {
 		mlConfigs = append(mlConfigs, mlimporter.MLConfig{
-			ID:           fmt.Sprintf("filebeat-%s-%s-%s", fs.mcfg.Module, fs.name, ml.Name),
+			ID:           fmt.Sprintf("filebeat-%s-%s-%s_ecs", fs.mcfg.Module, fs.name, ml.Name),
 			JobPath:      filepath.Join(fs.modulePath, fs.name, ml.Job),
 			DatafeedPath: filepath.Join(fs.modulePath, fs.name, ml.Datafeed),
 			MinVersion:   ml.MinVersion,

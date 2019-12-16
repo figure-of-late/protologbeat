@@ -62,13 +62,14 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
           "ip": "181.214.87.71",
           "locality": "public",
           "port": 53787
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2018-04-15T03:30:00Z",
@@ -131,13 +132,14 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
           "ip": "0.0.0.0",
           "locality": "private",
           "port": 136
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2018-04-15T03:30:00Z",
@@ -200,13 +202,14 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
           "ip": "5.188.11.35",
           "locality": "public",
           "port": 44155
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2018-04-15T03:30:00Z",
@@ -269,13 +272,14 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
           "ip": "206.117.25.89",
           "locality": "public",
           "port": 0
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2018-04-15T03:30:00Z",
@@ -338,13 +342,14 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
           "ip": "0.0.0.0",
           "locality": "private",
           "port": 136
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2018-04-15T03:30:00Z",
@@ -407,13 +412,14 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
           "ip": "185.232.29.199",
           "locality": "public",
           "port": 55869
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2018-04-15T03:30:00Z",
@@ -476,13 +482,14 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
           "ip": "177.188.228.137",
           "locality": "public",
           "port": 9430
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2018-04-15T03:30:00Z",
@@ -545,13 +552,14 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
           "ip": "138.44.161.14",
           "locality": "public",
           "port": 33689
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     }
   ]
 }

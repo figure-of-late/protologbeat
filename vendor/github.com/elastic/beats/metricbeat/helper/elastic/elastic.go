@@ -77,7 +77,7 @@ func (p Product) String() string {
 // MakeXPackMonitoringIndexName method returns the name of the monitoring index for
 // a given product { elasticsearch, kibana, logstash, beats }
 func MakeXPackMonitoringIndexName(product Product) string {
-	const version = "6"
+	const version = "7"
 
 	return fmt.Sprintf(".monitoring-%v-%v-mb", product.xPackMonitoringIndexString(), version)
 }
@@ -105,4 +105,25 @@ func IsFeatureAvailable(currentProductVersion, featureAvailableInProductVersion 
 func ReportAndLogError(err error, r mb.ReporterV2, l *logp.Logger) {
 	r.Error(err)
 	l.Error(err)
+}
+
+// FixTimestampField converts the given timestamp field in the given map from a float64 to an
+// int, so that it is not serialized in scientific notation in the event. This is because
+// Elasticsearch cannot accepts scientific notation to represent millis-since-epoch values
+// for it's date fields: https://github.com/elastic/elasticsearch/pull/36691
+func FixTimestampField(m common.MapStr, field string) error {
+	v, err := m.GetValue(field)
+	if err == common.ErrKeyNotFound {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	switch vv := v.(type) {
+	case float64:
+		_, err := m.Put(field, int(vv))
+		return err
+	}
+	return nil
 }

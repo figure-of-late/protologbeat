@@ -123,6 +123,10 @@ func (host *Host) toMapStr() common.MapStr {
 		mapstr.Put("containerized", host.Info.Containerized)
 	}
 
+	if host.Info.OS.Codename != "" {
+		mapstr.Put("os.codename", host.Info.OS.Codename)
+	}
+
 	var ipStrings []string
 	for _, ip := range host.Ips {
 		ipStrings = append(ipStrings, ip.String())
@@ -160,7 +164,7 @@ type MetricSet struct {
 
 // New constructs a new MetricSet.
 func New(base mb.BaseMetricSet) (mb.MetricSet, error) {
-	cfgwarn.Experimental("The %v/%v dataset is experimental", moduleName, metricsetName)
+	cfgwarn.Beta("The %v/%v dataset is beta", moduleName, metricsetName)
 
 	config := defaultConfig()
 	if err := base.Module().UnpackConfig(&config); err != nil {
@@ -313,7 +317,9 @@ func getHost() (*Host, error) {
 }
 
 func hostEvent(host *Host, eventType string, action eventAction) mb.Event {
-	return mb.Event{
+	hostFields := host.toMapStr()
+
+	event := mb.Event{
 		RootFields: common.MapStr{
 			"event": common.MapStr{
 				"kind":   eventType,
@@ -321,8 +327,27 @@ func hostEvent(host *Host, eventType string, action eventAction) mb.Event {
 			},
 			"message": hostMessage(host, action),
 		},
-		MetricSetFields: host.toMapStr(),
+		MetricSetFields: hostFields,
 	}
+
+	// Copy select host.* fields in case add_host_metadata is not configured.
+	hostTopLevel := common.MapStr{}
+	hostFields.CopyFieldsTo(hostTopLevel, "architecture")
+	hostFields.CopyFieldsTo(hostTopLevel, "containerized")
+	hostFields.CopyFieldsTo(hostTopLevel, "hostname")
+	hostFields.CopyFieldsTo(hostTopLevel, "id")
+	hostFields.CopyFieldsTo(hostTopLevel, "ip")
+	hostFields.CopyFieldsTo(hostTopLevel, "mac")
+	hostFields.CopyFieldsTo(hostTopLevel, "os.codename")
+	hostFields.CopyFieldsTo(hostTopLevel, "os.family")
+	hostFields.CopyFieldsTo(hostTopLevel, "os.kernel")
+	hostFields.CopyFieldsTo(hostTopLevel, "os.name")
+	hostFields.CopyFieldsTo(hostTopLevel, "os.platform")
+	hostFields.CopyFieldsTo(hostTopLevel, "os.version")
+
+	event.RootFields.Put("host", hostTopLevel)
+
+	return event
 }
 
 func hostMessage(host *Host, action eventAction) string {

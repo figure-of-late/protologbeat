@@ -65,13 +65,16 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
+          "bytes": 775,
           "ip": "10.113.7.54",
           "locality": "private",
+          "packets": 8,
           "port": 41717
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     }
   ]
 }

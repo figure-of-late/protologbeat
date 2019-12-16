@@ -45,12 +45,10 @@ const (
 	expectedManifestMode   = os.FileMode(0644)
 	expectedModuleFileMode = expectedManifestMode
 	expectedModuleDirMode  = os.FileMode(0755)
-	expectedConfigUID      = 0
-	expectedConfigGID      = 0
 )
 
 var (
-	configFilePattern      = regexp.MustCompile(`.*beat\.yml|apm-server\.yml`)
+	configFilePattern      = regexp.MustCompile(`.*beat\.yml$|apm-server\.yml$`)
 	manifestFilePattern    = regexp.MustCompile(`manifest.yml`)
 	modulesDirPattern      = regexp.MustCompile(`module/.+`)
 	modulesDDirPattern     = regexp.MustCompile(`modules.d/$`)
@@ -60,10 +58,13 @@ var (
 )
 
 var (
-	files     = flag.String("files", "../build/distributions/*/*", "filepath glob containing package files")
-	modules   = flag.Bool("modules", false, "check modules folder contents")
-	modulesd  = flag.Bool("modules.d", false, "check modules.d folder contents")
-	monitorsd = flag.Bool("monitors.d", false, "check monitors.d folder contents")
+	files             = flag.String("files", "../build/distributions/*/*", "filepath glob containing package files")
+	modules           = flag.Bool("modules", false, "check modules folder contents")
+	minModules        = flag.Int("min-modules", 4, "minimum number of modules to expect in modules folder")
+	modulesd          = flag.Bool("modules.d", false, "check modules.d folder contents")
+	monitorsd         = flag.Bool("monitors.d", false, "check monitors.d folder contents")
+	rootOwner         = flag.Bool("root-owner", false, "expect root to own package files")
+	rootUserContainer = flag.Bool("root-user-container", false, "expect root in container user")
 )
 
 func TestRPM(t *testing.T) {
@@ -113,15 +114,16 @@ func checkRPM(t *testing.T, file string) {
 	}
 
 	checkConfigPermissions(t, p)
-	checkConfigOwner(t, p)
+	checkConfigOwner(t, p, *rootOwner)
 	checkManifestPermissions(t, p)
-	checkManifestOwner(t, p)
+	checkManifestOwner(t, p, *rootOwner)
+	checkModulesOwner(t, p, *rootOwner)
 	checkModulesPermissions(t, p)
 	checkModulesPresent(t, "/usr/share", p)
 	checkModulesDPresent(t, "/etc/", p)
 	checkMonitorsDPresent(t, "/etc", p)
-	checkModulesOwner(t, p)
 	checkSystemdUnitPermissions(t, p)
+	ensureNoBuildIDLinks(t, p)
 }
 
 func checkDeb(t *testing.T, file string, buf *bytes.Buffer) {
@@ -131,15 +133,16 @@ func checkDeb(t *testing.T, file string, buf *bytes.Buffer) {
 		return
 	}
 
+	// deb file permissions are managed post-install
 	checkConfigPermissions(t, p)
-	checkConfigOwner(t, p)
+	checkConfigOwner(t, p, true)
 	checkManifestPermissions(t, p)
-	checkManifestOwner(t, p)
+	checkManifestOwner(t, p, true)
 	checkModulesPresent(t, "./usr/share", p)
 	checkModulesDPresent(t, "./etc/", p)
 	checkMonitorsDPresent(t, "./etc/", p)
+	checkModulesOwner(t, p, true)
 	checkModulesPermissions(t, p)
-	checkModulesOwner(t, p)
 	checkSystemdUnitPermissions(t, p)
 }
 
@@ -151,12 +154,12 @@ func checkTar(t *testing.T, file string) {
 	}
 
 	checkConfigPermissions(t, p)
-	checkConfigOwner(t, p)
+	checkConfigOwner(t, p, true)
 	checkManifestPermissions(t, p)
 	checkModulesPresent(t, "", p)
 	checkModulesDPresent(t, "", p)
 	checkModulesPermissions(t, p)
-	checkModulesOwner(t, p)
+	checkModulesOwner(t, p, true)
 }
 
 func checkZip(t *testing.T, file string) {
@@ -181,19 +184,27 @@ func checkDocker(t *testing.T, file string) {
 	}
 
 	checkDockerEntryPoint(t, p, info)
+	checkDockerLabels(t, p, info, file)
+	checkDockerUser(t, p, info, *rootUserContainer)
+	checkConfigPermissionsWithMode(t, p, os.FileMode(0640))
+	checkManifestPermissionsWithMode(t, p, os.FileMode(0640))
 	checkModulesPresent(t, "", p)
 	checkModulesDPresent(t, "", p)
 }
 
 // Verify that the main configuration file is installed with a 0600 file mode.
 func checkConfigPermissions(t *testing.T, p *packageFile) {
+	checkConfigPermissionsWithMode(t, p, expectedConfigMode)
+}
+
+func checkConfigPermissionsWithMode(t *testing.T, p *packageFile, expectedMode os.FileMode) {
 	t.Run(p.Name+" config file permissions", func(t *testing.T) {
 		for _, entry := range p.Contents {
 			if configFilePattern.MatchString(entry.File) {
 				mode := entry.Mode.Perm()
-				if expectedConfigMode != mode {
+				if expectedMode != mode {
 					t.Errorf("file %v has wrong permissions: expected=%v actual=%v",
-						entry.File, expectedConfigMode, mode)
+						entry.File, expectedMode, mode)
 				}
 				return
 			}
@@ -202,16 +213,24 @@ func checkConfigPermissions(t *testing.T, p *packageFile) {
 	})
 }
 
-func checkConfigOwner(t *testing.T, p *packageFile) {
+func checkOwner(t *testing.T, entry packageEntry, expectRoot bool) {
+	should := "not "
+	if expectRoot {
+		should = ""
+	}
+	if expectRoot != (entry.UID == 0) {
+		t.Errorf("file %v should %sbe owned by root user, owner=%v", entry.File, should, entry.UID)
+	}
+	if expectRoot != (entry.GID == 0) {
+		t.Errorf("file %v should %sbe owned by root group, group=%v", entry.File, should, entry.GID)
+	}
+}
+
+func checkConfigOwner(t *testing.T, p *packageFile, expectRoot bool) {
 	t.Run(p.Name+" config file owner", func(t *testing.T) {
 		for _, entry := range p.Contents {
 			if configFilePattern.MatchString(entry.File) {
-				if expectedConfigUID != entry.UID {
-					t.Errorf("file %v should be owned by user %v, owner=%v", entry.File, expectedConfigGID, entry.UID)
-				}
-				if expectedConfigGID != entry.GID {
-					t.Errorf("file %v should be owned by group %v, group=%v", entry.File, expectedConfigGID, entry.GID)
-				}
+				checkOwner(t, entry, expectRoot)
 				return
 			}
 		}
@@ -221,30 +240,29 @@ func checkConfigOwner(t *testing.T, p *packageFile) {
 
 // Verify that the modules manifest.yml files are installed with a 0644 file mode.
 func checkManifestPermissions(t *testing.T, p *packageFile) {
+	checkManifestPermissionsWithMode(t, p, expectedManifestMode)
+}
+
+func checkManifestPermissionsWithMode(t *testing.T, p *packageFile, expectedMode os.FileMode) {
 	t.Run(p.Name+" manifest file permissions", func(t *testing.T) {
 		for _, entry := range p.Contents {
 			if manifestFilePattern.MatchString(entry.File) {
 				mode := entry.Mode.Perm()
-				if expectedManifestMode != mode {
+				if expectedMode != mode {
 					t.Errorf("file %v has wrong permissions: expected=%v actual=%v",
-						entry.File, expectedManifestMode, mode)
+						entry.File, expectedMode, mode)
 				}
 			}
 		}
 	})
 }
 
-// Verify that the manifest owner is root
-func checkManifestOwner(t *testing.T, p *packageFile) {
+// Verify that the manifest owner is correct.
+func checkManifestOwner(t *testing.T, p *packageFile, expectRoot bool) {
 	t.Run(p.Name+" manifest file owner", func(t *testing.T) {
 		for _, entry := range p.Contents {
 			if manifestFilePattern.MatchString(entry.File) {
-				if expectedConfigUID != entry.UID {
-					t.Errorf("file %v should be owned by user %v, owner=%v", entry.File, expectedConfigGID, entry.UID)
-				}
-				if expectedConfigGID != entry.GID {
-					t.Errorf("file %v should be owned by group %v, group=%v", entry.File, expectedConfigGID, entry.GID)
-				}
+				checkOwner(t, entry, expectRoot)
 			}
 		}
 	})
@@ -272,18 +290,32 @@ func checkModulesPermissions(t *testing.T, p *packageFile) {
 }
 
 // Verify the owner of the modules.d dir and its contents.
-func checkModulesOwner(t *testing.T, p *packageFile) {
+func checkModulesOwner(t *testing.T, p *packageFile, expectRoot bool) {
 	t.Run(p.Name+" modules.d file owner", func(t *testing.T) {
 		for _, entry := range p.Contents {
 			if modulesDFilePattern.MatchString(entry.File) || modulesDDirPattern.MatchString(entry.File) {
-				if expectedConfigUID != entry.UID {
-					t.Errorf("file %v should be owned by user %v, owner=%v", entry.File, expectedConfigGID, entry.UID)
-				}
-				if expectedConfigGID != entry.GID {
-					t.Errorf("file %v should be owned by group %v, group=%v", entry.File, expectedConfigGID, entry.GID)
-				}
+				checkOwner(t, entry, expectRoot)
 			}
 		}
+	})
+}
+
+// Verify that the systemd unit file has a mode of 0644. It should not be
+// executable.
+func checkSystemdUnitPermissions(t *testing.T, p *packageFile) {
+	const expectedMode = os.FileMode(0644)
+	t.Run(p.Name+" systemd unit file permissions", func(t *testing.T) {
+		for _, entry := range p.Contents {
+			if systemdUnitFilePattern.MatchString(entry.File) {
+				mode := entry.Mode.Perm()
+				if expectedMode != mode {
+					t.Errorf("file %v has wrong permissions: expected=%v actual=%v",
+						entry.File, expectedMode, mode)
+				}
+				return
+			}
+		}
+		t.Errorf("no systemd unit file found matching %v", configFilePattern)
 	})
 }
 
@@ -309,7 +341,7 @@ func checkMonitorsDPresent(t *testing.T, prefix string, p *packageFile) {
 
 func checkModules(t *testing.T, name, prefix string, r *regexp.Regexp, p *packageFile) {
 	t.Run(fmt.Sprintf("%s %s contents", p.Name, name), func(t *testing.T) {
-		minExpectedModules := 4
+		minExpectedModules := *minModules
 		total := 0
 		for _, entry := range p.Contents {
 			if strings.HasPrefix(entry.File, prefix) && r.MatchString(entry.File) {
@@ -321,25 +353,6 @@ func checkModules(t *testing.T, name, prefix string, r *regexp.Regexp, p *packag
 			t.Errorf("not enough modules found under %s: actual=%d, expected>=%d",
 				name, total, minExpectedModules)
 		}
-	})
-}
-
-// Verify that the systemd unit file has a mode of 0644. It should not be
-// executable.
-func checkSystemdUnitPermissions(t *testing.T, p *packageFile) {
-	const expectedMode = os.FileMode(0644)
-	t.Run(p.Name+" systemd unit file permissions", func(t *testing.T) {
-		for _, entry := range p.Contents {
-			if systemdUnitFilePattern.MatchString(entry.File) {
-				mode := entry.Mode.Perm()
-				if expectedMode != mode {
-					t.Errorf("file %v has wrong permissions: expected=%v actual=%v",
-						entry.File, expectedMode, mode)
-				}
-				return
-			}
-		}
-		t.Errorf("no systemd unit file found matching %v", configFilePattern)
 	})
 }
 
@@ -384,6 +397,47 @@ func checkDockerEntryPoint(t *testing.T, p *packageFile, info *dockerInfo) {
 	})
 }
 
+func checkDockerLabels(t *testing.T, p *packageFile, info *dockerInfo, file string) {
+	vendor := info.Config.Labels["org.label-schema.vendor"]
+	if vendor != "Elastic" {
+		return
+	}
+	t.Run(fmt.Sprintf("%s labels", p.Name), func(t *testing.T) {
+		expectedLicense := "Elastic License"
+		ossPrefix := strings.Join([]string{
+			info.Config.Labels["org.label-schema.name"],
+			"oss",
+			info.Config.Labels["org.label-schema.version"],
+		}, "-")
+		if strings.HasPrefix(filepath.Base(file), ossPrefix) {
+			expectedLicense = "ASL 2.0"
+		}
+		if license, present := info.Config.Labels["license"]; !present || license != expectedLicense {
+			t.Errorf("unexpected license label: %s", license)
+		}
+	})
+}
+
+func checkDockerUser(t *testing.T, p *packageFile, info *dockerInfo, expectRoot bool) {
+	t.Run(fmt.Sprintf("%s user", p.Name), func(t *testing.T) {
+		if expectRoot != (info.Config.User == "root") {
+			t.Errorf("unexpected docker user: %s", info.Config.User)
+		}
+	})
+}
+
+// ensureNoBuildIDLinks checks for regressions related to
+// https://github.com/elastic/beats/issues/12956.
+func ensureNoBuildIDLinks(t *testing.T, p *packageFile) {
+	t.Run(fmt.Sprintf("%s no build_id links", p.Name), func(t *testing.T) {
+		for name := range p.Contents {
+			if strings.Contains(name, "/usr/lib/.build-id") {
+				t.Error("found unexpected /usr/lib/.build-id in package")
+			}
+		}
+	})
+}
+
 // Helpers
 
 type packageFile struct {
@@ -410,7 +464,6 @@ func getFiles(t *testing.T, pattern *regexp.Regexp) []string {
 			files = append(files, f)
 		}
 	}
-
 	return files
 }
 
@@ -424,10 +477,16 @@ func readRPM(rpmFile string) (*packageFile, error) {
 	pf := &packageFile{Name: filepath.Base(rpmFile), Contents: map[string]packageEntry{}}
 
 	for _, file := range contents {
-		pf.Contents[file.Name()] = packageEntry{
+		pe := packageEntry{
 			File: file.Name(),
 			Mode: file.Mode(),
 		}
+		if file.Owner() != "root" {
+			// not 0
+			pe.UID = 123
+			pe.GID = 123
+		}
+		pf.Contents[file.Name()] = pe
 	}
 
 	return pf, nil
@@ -636,8 +695,10 @@ func readDockerManifest(r io.Reader) (*dockerManifest, error) {
 
 type dockerInfo struct {
 	Config struct {
-		WorkingDir string
 		Entrypoint []string
+		Labels     map[string]string
+		User       string
+		WorkingDir string
 	} `json:"config"`
 }
 

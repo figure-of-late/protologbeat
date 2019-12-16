@@ -70,14 +70,17 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
+          "bytes": 44,
           "ip": "10.30.18.62",
           "locality": "private",
           "mac": "00:50:56:91:56:86",
+          "packets": 1,
           "port": 0
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2017-02-14T11:10:36Z",
@@ -148,14 +151,17 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
+          "bytes": 106,
           "ip": "10.30.18.62",
           "locality": "private",
           "mac": "00:50:56:91:56:86",
+          "packets": 1,
           "port": 34220
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2017-02-14T11:10:36Z",
@@ -226,14 +232,17 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
+          "bytes": 44,
           "ip": "10.10.172.60",
           "locality": "private",
           "mac": "00:18:19:9e:6c:01",
+          "packets": 1,
           "port": 0
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2017-02-14T11:10:36Z",
@@ -304,14 +313,17 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
+          "bytes": 76,
           "ip": "10.10.172.60",
           "locality": "private",
           "mac": "00:18:19:9e:6c:01",
+          "packets": 1,
           "port": 123
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2017-02-14T11:10:36Z",
@@ -382,14 +394,17 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
+          "bytes": 2794,
           "ip": "10.10.172.60",
           "locality": "private",
           "mac": "00:18:19:9e:6c:01",
+          "packets": 36,
           "port": 45269
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     }
   ]
 }

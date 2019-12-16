@@ -25,16 +25,20 @@ import (
 	"github.com/magefile/mage/sh"
 	"github.com/pkg/errors"
 
-	"github.com/elastic/beats/dev-tools/mage"
+	devtools "github.com/elastic/beats/dev-tools/mage"
 )
 
-// CollectDocs collects documentation from modules.
-func CollectDocs(basePaths ...string) error {
+// ModuleDocs collects documentation from modules (both OSS and X-Pack).
+func ModuleDocs() error {
+	dirsWithModules := []string{
+		devtools.OSSBeatDir(),
+		devtools.XPackBeatDir(),
+	}
 
 	// Generate config.yml files for each module.
 	var configFiles []string
-	for _, path := range basePaths {
-		files, err := mage.FindFiles(filepath.Join(path, ConfigTemplateGlob))
+	for _, path := range dirsWithModules {
+		files, err := devtools.FindFiles(filepath.Join(path, configTemplateGlob))
 		if err != nil {
 			return errors.Wrap(err, "failed to find config templates")
 		}
@@ -52,12 +56,12 @@ func CollectDocs(basePaths ...string) error {
 	for _, src := range configFiles {
 		dst := strings.TrimSuffix(src, ".tmpl")
 		configs = append(configs, dst)
-		mage.MustExpandFile(src, dst, params)
+		devtools.MustExpandFile(src, dst, params)
 	}
-	defer mage.Clean(configs)
+	defer devtools.Clean(configs)
 
 	// Remove old.
-	for _, path := range basePaths {
+	for _, path := range dirsWithModules {
 		if err := os.RemoveAll(filepath.Join(path, "docs/modules")); err != nil {
 			return err
 		}
@@ -67,35 +71,33 @@ func CollectDocs(basePaths ...string) error {
 	}
 
 	// Run the docs_collector.py script.
-	ve, err := mage.PythonVirtualenv()
+	ve, err := devtools.PythonVirtualenv()
 	if err != nil {
 		return err
 	}
 
-	python, err := mage.LookVirtualenvPath(ve, "python")
+	python, err := devtools.LookVirtualenvPath(ve, "python")
 	if err != nil {
 		return err
 	}
 
 	// TODO: Port this script to Go.
-	args := []string{mage.OSSBeatDir("scripts/docs_collector.py"), "--base-paths"}
-	args = append(args, basePaths...)
+	args := []string{devtools.OSSBeatDir("scripts/docs_collector.py"), "--base-paths"}
+	args = append(args, dirsWithModules...)
 
-	err = sh.Run(python, args...)
-	if err != nil {
-		return err
-	}
-
-	esBeats, err := mage.ElasticBeatsDir()
-	if err != nil {
-		return err
-	}
-
-	return sh.Run(python, mage.LibbeatDir("scripts/generate_fields_docs.py"),
-		XpackBeatDir(), mage.BeatName, esBeats, "--output_path", mage.OSSBeatDir())
+	return sh.Run(python, args...)
 }
 
-// XpackBeatDir returns the x-pack/{beatname} directory for a Beat.
-func XpackBeatDir() string {
-	return mage.OSSBeatDir("../x-pack", mage.BeatName)
+// FieldDocs generates docs/fields.asciidoc containing all fields
+// (including x-pack).
+func FieldDocs() error {
+	inputs := []string{
+		devtools.OSSBeatDir("module"),
+		devtools.XPackBeatDir("module"),
+	}
+	output := devtools.CreateDir("build/fields/fields.all.yml")
+	if err := devtools.GenerateFieldsYAMLTo(output, inputs...); err != nil {
+		return err
+	}
+	return devtools.Docs.FieldDocs(output)
 }

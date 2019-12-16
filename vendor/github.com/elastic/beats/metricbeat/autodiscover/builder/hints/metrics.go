@@ -27,7 +27,6 @@ import (
 	"github.com/elastic/beats/libbeat/autodiscover/template"
 	"github.com/elastic/beats/libbeat/common"
 	"github.com/elastic/beats/libbeat/common/bus"
-	"github.com/elastic/beats/libbeat/common/cfgwarn"
 	"github.com/elastic/beats/libbeat/logp"
 	"github.com/elastic/beats/metricbeat/mb"
 )
@@ -37,13 +36,14 @@ func init() {
 }
 
 const (
-	module     = "module"
-	namespace  = "namespace"
-	hosts      = "hosts"
-	metricsets = "metricsets"
-	period     = "period"
-	timeout    = "timeout"
-	ssl        = "ssl"
+	module      = "module"
+	namespace   = "namespace"
+	hosts       = "hosts"
+	metricsets  = "metricsets"
+	period      = "period"
+	timeout     = "timeout"
+	ssl         = "ssl"
+	metricspath = "metrics_path"
 
 	defaultTimeout = "3s"
 	defaultPeriod  = "1m"
@@ -56,7 +56,6 @@ type metricHints struct {
 
 // NewMetricHints builds a new metrics builder based on hints
 func NewMetricHints(cfg *common.Config) (autodiscover.Builder, error) {
-	cfgwarn.Beta("The hints builder is beta")
 	config := defaultConfig()
 	err := cfg.Unpack(&config)
 
@@ -112,6 +111,7 @@ func (m *metricHints) CreateConfig(event bus.Event) []*common.Config {
 	ival := m.getPeriod(hints)
 	sslConf := m.getSSLConfig(hints)
 	procs := m.getProcessors(hints)
+	metricspath := m.getMetricPath(hints)
 
 	moduleConfig := common.MapStr{
 		"module":     mod,
@@ -126,6 +126,9 @@ func (m *metricHints) CreateConfig(event bus.Event) []*common.Config {
 
 	if ns != "" {
 		moduleConfig["namespace"] = ns
+	}
+	if metricspath != "" {
+		moduleConfig["metrics_path"] = metricspath
 	}
 
 	logp.Debug("hints.builder", "generated config: %v", moduleConfig.String())
@@ -189,6 +192,10 @@ func (m *metricHints) getHostsWithPort(hints common.MapStr, port int) ([]string,
 
 func (m *metricHints) getNamespace(hints common.MapStr) string {
 	return builder.GetHintString(hints, m.Key, namespace)
+}
+
+func (m *metricHints) getMetricPath(hints common.MapStr) string {
+	return builder.GetHintString(hints, m.Key, metricspath)
 }
 
 func (m *metricHints) getPeriod(hints common.MapStr) string {

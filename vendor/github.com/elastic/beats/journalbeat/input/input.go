@@ -73,6 +73,7 @@ func New(
 			Seek:               config.Seek,
 			CursorSeekFallback: config.CursorSeekFallback,
 			Matches:            config.Matches,
+			SaveRemoteHostname: config.SaveRemoteHostname,
 		}
 
 		state := states[reader.LocalSystemJournalID]
@@ -91,6 +92,7 @@ func New(
 			Seek:               config.Seek,
 			CursorSeekFallback: config.CursorSeekFallback,
 			Matches:            config.Matches,
+			SaveRemoteHostname: config.SaveRemoteHostname,
 		}
 		state := states[p]
 		r, err := reader.New(cfg, done, state, logger)
@@ -125,10 +127,12 @@ func New(
 func (i *Input) Run() {
 	var err error
 	i.client, err = i.pipeline.ConnectWith(beat.ClientConfig{
-		PublishMode:   beat.GuaranteedSend,
-		EventMetadata: i.eventMeta,
-		Meta:          nil,
-		Processor:     i.processors,
+		PublishMode: beat.GuaranteedSend,
+		Processing: beat.ProcessingConfig{
+			EventMetadata: i.eventMeta,
+			Meta:          nil,
+			Processor:     i.processors,
+		},
 		ACKCount: func(n int) {
 			i.logger.Infof("journalbeat successfully published %d events", n)
 		},

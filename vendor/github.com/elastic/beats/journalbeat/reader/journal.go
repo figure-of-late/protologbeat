@@ -169,6 +169,7 @@ func (r *Reader) seek(cursor string) {
 		r.logger.Debug("Seeked to position defined in cursor")
 	case config.SeekTail:
 		r.journal.SeekTail()
+		r.journal.Next()
 		r.logger.Debug("Tailing the journal file")
 	case config.SeekHead:
 		r.journal.SeekHead()
@@ -216,6 +217,7 @@ func (r *Reader) Next() (*beat.Event, error) {
 			return nil, err
 		}
 		event := r.toEvent(entry)
+		r.backoff.Reset()
 
 		return event, nil
 	}
@@ -252,7 +254,16 @@ func (r *Reader) toEvent(entry *sdjournal.JournalEntry) *beat.Event {
 	}
 
 	if len(custom) != 0 {
-		fields["custom"] = custom
+		fields.Put("journald.custom", custom)
+	}
+
+	// if entry is coming from a remote journal, add_host_metadata overwrites the source hostname, so it
+	// has to be copied to a different field
+	if r.config.SaveRemoteHostname {
+		remoteHostname, err := fields.GetValue("host.hostname")
+		if err == nil {
+			fields.Put("log.source.address", remoteHostname)
+		}
 	}
 
 	state := checkpoint.JournalState{
@@ -262,7 +273,7 @@ func (r *Reader) toEvent(entry *sdjournal.JournalEntry) *beat.Event {
 		MonotonicTimestamp: entry.MonotonicTimestamp,
 	}
 
-	fields["read_timestamp"] = time.Now()
+	fields.Put("event.created", time.Now())
 	receivedByJournal := time.Unix(0, int64(entry.RealtimeTimestamp)*1000)
 
 	event := beat.Event{

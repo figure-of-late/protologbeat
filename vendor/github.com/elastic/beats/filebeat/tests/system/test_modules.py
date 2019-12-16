@@ -96,7 +96,7 @@ class Test(BaseTest):
             template_name="filebeat_modules",
             output=cfgfile,
             index_name=self.index_name,
-            elasticsearch_url=self.elasticsearch_url
+            elasticsearch_url=self.elasticsearch_url,
         )
 
         self.run_on_file(
@@ -118,6 +118,7 @@ class Test(BaseTest):
             self.filebeat, "-systemTest",
             "-e", "-d", "*", "-once",
             "-c", cfgfile,
+            "-E", "setup.ilm.enabled=false",
             "-modules={}".format(module),
             "-M", "{module}.*.enabled=false".format(module=module),
             "-M", "{module}.{fileset}.enabled=true".format(
@@ -137,7 +138,16 @@ class Test(BaseTest):
         output_path = os.path.join(self.working_dir)
         output = open(os.path.join(output_path, "output.log"), "ab")
         output.write(" ".join(cmd) + "\n")
+
+        # Use a fixed timezone so results don't vary depending on the environment
+        # Don't use UTC to avoid hiding that non-UTC timezones are not being converted as needed,
+        # this can happen because UTC uses to be the default timezone in date parsers when no other
+        # timezone is specified.
+        local_env = os.environ.copy()
+        local_env["TZ"] = 'Etc/GMT+2'
+
         subprocess.Popen(cmd,
+                         env=local_env,
                          stdin=None,
                          stdout=output,
                          stderr=subprocess.STDOUT,
@@ -149,12 +159,12 @@ class Test(BaseTest):
         self.es.indices.refresh(index=self.index_name)
         # Loads the first 100 events to be checked
         res = self.es.search(index=self.index_name,
-                             body={"query": {"match_all": {}}, "size": 100, "sort": {"offset": {"order": "asc"}}})
+                             body={"query": {"match_all": {}}, "size": 100, "sort": {"log.offset": {"order": "asc"}}})
         objects = [o["_source"] for o in res["hits"]["hits"]]
         assert len(objects) > 0
         for obj in objects:
-            assert obj["fileset"]["module"] == module, "expected fileset.module={} but got {}".format(
-                module, obj["fileset"]["module"])
+            assert obj["event"]["module"] == module, "expected event.module={} but got {}".format(
+                module, obj["event"]["module"])
 
             assert "error" not in obj, "not error expected but got: {}".format(
                 obj)
@@ -166,8 +176,7 @@ class Test(BaseTest):
             else:
                 self.assert_fields_are_documented(obj)
 
-        if os.path.exists(test_file + "-expected.json"):
-            self._test_expected_events(test_file, objects)
+        self._test_expected_events(test_file, objects)
 
     def _test_expected_events(self, test_file, objects):
 
@@ -189,6 +198,7 @@ class Test(BaseTest):
             len(expected), len(objects))
 
         for ev in expected:
+            clean_keys(ev)
             found = False
             for obj in objects:
 
@@ -206,18 +216,39 @@ class Test(BaseTest):
 
 def clean_keys(obj):
     # These keys are host dependent
-    host_keys = ["host.name", "beat.hostname", "beat.name", "agent.ephemeral_id", "agent.id"]
+    host_keys = ["host.name", "agent.hostname", "agent.type", "agent.ephemeral_id", "agent.id"]
     # The create timestamps area always new
-    time_keys = ["read_timestamp", "event.created"]
-    # source path and beat.version can be different for each run
-    other_keys = ["source", "log.file.path", "beat.version"]
+    time_keys = ["event.created"]
+    # source path and agent.version can be different for each run
+    other_keys = ["log.file.path", "agent.version"]
+    # ECS versions change for any ECS release, large or small
+    ecs_key = ["ecs.version"]
+    # datasets for which @timestamp is removed due to date missing
+    remove_timestamp = {"icinga.startup", "redis.log", "haproxy.log", "system.auth", "system.syslog", "cef.log"}
+    # dataset + log file pairs for which @timestamp is kept as an exception from above
+    remove_timestamp_exception = {
+        ('system.syslog', 'tz-offset.log'),
+        ('system.auth', 'timestamp.log')
+    }
 
-    for key in host_keys + time_keys + other_keys:
+    # Keep source log filename for exceptions
+    filename = None
+    if "log.file.path" in obj:
+        filename = os.path.basename(obj["log.file.path"]).lower()
+
+    for key in host_keys + time_keys + other_keys + ecs_key:
         delete_key(obj, key)
 
-    # Remove timestamp for comparison where timestamp is not part of the log line
-    if obj["event.dataset"] in ["icinga.startup", "redis.log", "haproxy.log", "system.auth", "system.syslog"]:
-        delete_key(obj, "@timestamp")
+    # Most logs from syslog need their timestamp removed because it doesn't
+    # include a year.
+    if obj["event.dataset"] in remove_timestamp:
+        if not (obj['event.dataset'], filename) in remove_timestamp_exception:
+            delete_key(obj, "@timestamp")
+        else:
+            # excluded events need to have their filename saved to the expected.json
+            # so that the exception mechanism can be triggered when the json is
+            # loaded.
+            obj["log.file.path"] = filename
 
 
 def delete_key(obj, key):

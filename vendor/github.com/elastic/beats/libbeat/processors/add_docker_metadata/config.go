@@ -15,6 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// +build linux darwin windows
+
 package add_docker_metadata
 
 import (
@@ -46,6 +48,6 @@ func defaultConfig() Config {
 		MatchSource: true,
 		SourceIndex: 4, // Use 4 to match the CID in /var/lib/docker/containers/<container_id>/*.log.
 		MatchPIDs:   []string{"process.pid", "process.ppid"},
-		DeDot:       false,
+		DeDot:       true,
 	}
 }

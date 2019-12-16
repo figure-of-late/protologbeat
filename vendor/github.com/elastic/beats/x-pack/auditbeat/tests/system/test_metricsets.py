@@ -17,11 +17,12 @@ class Test(AuditbeatXPackTest):
         host metricset collects general information about a server.
         """
 
-        fields = ["system.audit.host.id", "system.audit.host.uptime", "system.audit.host.ip",
+        fields = ["host.name", "host.architecture", "host.hostname", "host.id", "host.ip", "host.mac",
+                  "host.os.family", "host.os.kernel", "host.os.name", "host.os.platform", "host.os.version",
+                  "system.audit.host.id", "system.audit.host.uptime", "system.audit.host.ip",
                   "system.audit.host.os.name"]
 
-        # Metricset is experimental and that generates a warning, TODO: remove later
-        self.check_metricset("system", "host", COMMON_FIELDS + fields, warnings_allowed=True)
+        self.check_metricset("system", "host", COMMON_FIELDS + fields)
 
     @unittest.skipUnless(sys.platform == "linux2", "Only implemented for Linux")
     @unittest.skipIf(sys.byteorder != "little", "Test only implemented for little-endian systems")
@@ -38,7 +39,7 @@ class Test(AuditbeatXPackTest):
             "login.btmp_file_pattern": os.path.abspath(os.path.join(self.beat_path, "module/system/login/testdata/btmp*")),
         }
 
-        # Metricset is experimental and that generates a warning, TODO: remove later
+        # Metricset is beta and that generates a warning, TODO: remove later
         self.check_metricset("system", "login", COMMON_FIELDS + fields, config, warnings_allowed=True)
 
     @unittest.skipIf(sys.platform == "win32", "Not implemented for Windows")
@@ -51,7 +52,7 @@ class Test(AuditbeatXPackTest):
 
         fields = ["system.audit.package.entity_id", "system.audit.package.name", "system.audit.package.version"]
 
-        # Metricset is experimental and that generates a warning, TODO: remove later
+        # Metricset is beta and that generates a warning, TODO: remove later
         self.check_metricset("system", "package", COMMON_FIELDS + fields, warnings_allowed=True)
 
     def test_metricset_process(self):
@@ -67,21 +68,11 @@ class Test(AuditbeatXPackTest):
             fields.extend(["user.effective.id", "user.saved.id", "user.effective.group.id", "user.saved.group.id",
                            "user.name", "user.group.name"])
 
-        # Metricset is experimental and that generates a warning, TODO: remove later
-        self.check_metricset("system", "process", COMMON_FIELDS + fields, warnings_allowed=True)
-
-    @unittest.skipUnless(sys.platform == "linux2", "Only implemented for Linux")
-    def test_metricset_socket(self):
-        """
-        socket metricset collects information about open sockets on a system.
-        """
-
-        fields = ["socket.entity_id", "destination.port"]
-
-        # errors_allowed=True - The socket metricset fills the `error` field if the process enrichment fails
-        # (e.g. process has exited). This should not fail the test.
-        # warnings_allowed=True - Metricset is experimental and that generates a warning, TODO: remove later
-        self.check_metricset("system", "socket", COMMON_FIELDS + fields, errors_allowed=True, warnings_allowed=True)
+        # process.hash.max_file_size: 1 - To speed things up during testing, we effectively disable hashing.
+        # errors_allowed|warnings_allowed=True - Disabling hashing causes the dataset to add an error to the event
+        # and log a warning. That should not fail the test.
+        self.check_metricset("system", "process", COMMON_FIELDS + fields, {"process.hash.max_file_size": 1},
+                             errors_allowed=True, warnings_allowed=True)
 
     @unittest.skipUnless(sys.platform == "linux2", "Only implemented for Linux")
     def test_metricset_user(self):

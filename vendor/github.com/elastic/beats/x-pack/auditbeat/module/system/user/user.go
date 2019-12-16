@@ -202,7 +202,7 @@ type MetricSet struct {
 
 // New constructs a new MetricSet.
 func New(base mb.BaseMetricSet) (mb.MetricSet, error) {
-	cfgwarn.Experimental("The %v/%v dataset is experimental", moduleName, metricsetName)
+	cfgwarn.Beta("The %v/%v dataset is beta", moduleName, metricsetName)
 	if runtime.GOOS != "linux" {
 		return nil, fmt.Errorf("the %v/%v dataset is only supported on Linux", moduleName, metricsetName)
 	}
@@ -471,10 +471,12 @@ func userMessage(user *User, action eventAction) string {
 func fmtGroups(groups []*user.Group) string {
 	var b strings.Builder
 
-	b.WriteString(groups[0].Name)
-	for _, group := range groups[1:] {
-		b.WriteString(",")
-		b.WriteString(group.Name)
+	if len(groups) > 0 {
+		b.WriteString(groups[0].Name)
+		for _, group := range groups[1:] {
+			b.WriteString(",")
+			b.WriteString(group.Name)
+		}
 	}
 
 	return b.String()

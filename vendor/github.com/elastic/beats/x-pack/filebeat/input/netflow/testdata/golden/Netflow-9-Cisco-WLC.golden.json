@@ -48,13 +48,16 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
+          "bytes": 3320,
           "ip": "192.168.20.121",
           "locality": "private",
-          "mac": "34:02:86:75:c0:51"
+          "mac": "34:02:86:75:c0:51",
+          "packets": 83
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2017-06-22T06:31:14Z",
@@ -105,11 +108,14 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
-          "mac": "00:f6:63:cc:80:60"
+        "source": {
+          "bytes": 3320,
+          "mac": "00:f6:63:cc:80:60",
+          "packets": 83
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2017-06-22T06:31:14Z",
@@ -158,13 +164,16 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
+          "bytes": 7760,
           "ip": "192.168.20.121",
           "locality": "private",
-          "mac": "34:02:86:75:c0:51"
+          "mac": "34:02:86:75:c0:51",
+          "packets": 69
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2017-06-22T06:31:14Z",
@@ -215,11 +224,14 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
-          "mac": "00:f6:63:cc:80:60"
+        "source": {
+          "bytes": 10229,
+          "mac": "00:f6:63:cc:80:60",
+          "packets": 69
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2017-06-22T06:31:14Z",
@@ -268,13 +280,16 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
+          "bytes": 215,
           "ip": "192.168.20.121",
           "locality": "private",
-          "mac": "34:02:86:75:c0:51"
+          "mac": "34:02:86:75:c0:51",
+          "packets": 1
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2017-06-22T06:31:14Z",
@@ -323,13 +338,16 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
+          "bytes": 40854,
           "ip": "192.168.20.121",
           "locality": "private",
-          "mac": "34:02:86:75:c0:51"
+          "mac": "34:02:86:75:c0:51",
+          "packets": 225
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2017-06-22T06:31:14Z",
@@ -380,11 +398,14 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
-          "mac": "00:f6:63:cc:80:60"
+        "source": {
+          "bytes": 35866,
+          "mac": "00:f6:63:cc:80:60",
+          "packets": 154
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2017-06-22T06:31:14Z",
@@ -433,13 +454,16 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
+          "bytes": 12279,
           "ip": "192.168.20.121",
           "locality": "private",
-          "mac": "34:02:86:75:c0:51"
+          "mac": "34:02:86:75:c0:51",
+          "packets": 63
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2017-06-22T06:31:14Z",
@@ -490,11 +514,14 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
-          "mac": "00:f6:63:cc:80:60"
+        "source": {
+          "bytes": 27287,
+          "mac": "00:f6:63:cc:80:60",
+          "packets": 61
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2017-06-22T06:31:14Z",
@@ -543,13 +570,16 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
+          "bytes": 147145,
           "ip": "192.168.20.121",
           "locality": "private",
-          "mac": "34:02:86:75:c0:51"
+          "mac": "34:02:86:75:c0:51",
+          "packets": 773
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2017-06-22T06:31:14Z",
@@ -600,11 +630,14 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
-          "mac": "00:f6:63:cc:80:60"
+        "source": {
+          "bytes": 1182695,
+          "mac": "00:f6:63:cc:80:60",
+          "packets": 1379
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2017-06-22T06:31:14Z",
@@ -653,13 +686,16 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
+          "bytes": 6777,
           "ip": "192.168.20.121",
           "locality": "private",
-          "mac": "34:02:86:75:c0:51"
+          "mac": "34:02:86:75:c0:51",
+          "packets": 26
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2017-06-22T06:31:14Z",
@@ -710,11 +746,14 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
-          "mac": "00:f6:63:cc:80:60"
+        "source": {
+          "bytes": 8625,
+          "mac": "00:f6:63:cc:80:60",
+          "packets": 26
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2017-06-22T06:31:14Z",
@@ -763,13 +802,16 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
+          "bytes": 2433001,
           "ip": "192.168.20.121",
           "locality": "private",
-          "mac": "34:02:86:75:c0:51"
+          "mac": "34:02:86:75:c0:51",
+          "packets": 20434
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2017-06-22T06:31:14Z",
@@ -820,11 +862,14 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
-          "mac": "00:f6:63:cc:80:60"
+        "source": {
+          "bytes": 56599680,
+          "mac": "00:f6:63:cc:80:60",
+          "packets": 40726
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2017-06-22T06:31:14Z",
@@ -873,13 +918,16 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
+          "bytes": 1658,
           "ip": "192.168.20.121",
           "locality": "private",
-          "mac": "34:02:86:75:c0:51"
+          "mac": "34:02:86:75:c0:51",
+          "packets": 15
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2017-06-22T06:31:14Z",
@@ -930,11 +978,14 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
-          "mac": "00:f6:63:cc:80:60"
+        "source": {
+          "bytes": 950,
+          "mac": "00:f6:63:cc:80:60",
+          "packets": 14
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2017-06-22T06:31:14Z",
@@ -983,13 +1034,16 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
+        "source": {
+          "bytes": 1495567,
           "ip": "192.168.20.121",
           "locality": "private",
-          "mac": "34:02:86:75:c0:51"
+          "mac": "34:02:86:75:c0:51",
+          "packets": 16145
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     },
     {
       "Timestamp": "2017-06-22T06:31:14Z",
@@ -1040,11 +1094,14 @@
         "observer": {
           "ip": "192.0.2.1"
         },
-        "source_ecs": {
-          "mac": "00:f6:63:cc:80:60"
+        "source": {
+          "bytes": 80973880,
+          "mac": "00:f6:63:cc:80:60",
+          "packets": 53362
         }
       },
-      "Private": null
+      "Private": null,
+      "TimeSeries": false
     }
   ]
 }
