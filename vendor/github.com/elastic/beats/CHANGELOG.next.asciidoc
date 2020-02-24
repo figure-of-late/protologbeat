@@ -10,23 +10,23 @@ https://github.com/elastic/beats/compare/v7.0.0-alpha2...master[Check the HEAD d
 
 *Affecting all Beats*
 
-- Update to Golang 1.12.1. {pull}11330[11330]
+- The document id fields has been renamed from @metadata.id to @metadata._id {pull}15859[15859]
+
 
 *Auditbeat*
 
 
 *Filebeat*
 
-- Fix parsing of Elasticsearch node name by `elasticsearch/slowlog` fileset. {pull}14547[14547]
 
 *Heartbeat*
 
 
 *Journalbeat*
 
+
 *Metricbeat*
 
-- kubernetes.container.cpu.limit.cores and kubernetes.container.cpu.requests.cores are now floats. {issue}11975[11975]
 
 *Packetbeat*
 
@@ -40,48 +40,36 @@ https://github.com/elastic/beats/compare/v7.0.0-alpha2...master[Check the HEAD d
 
 *Affecting all Beats*
 
-- Fix a race condition with the Kafka pipeline client, it is possible that `Close()` get called before `Connect()` . {issue}11945[11945]
-- Allow users to configure only `cluster_uuid` setting under `monitoring` namespace. {pull}14338[14338]
-- Fix `proxy_url` option in Elasticsearch output. {pull}14950[14950]
-- Fix bug with potential concurrent reads and writes from event.Meta map by Kafka output. {issue}14542[14542] {pull}14568[14568]
+- Fix missing output in dockerlogbeat {pull}15719[15719]
+- Fix issue where TLS settings would be ignored when a forward proxy was in use. {pull}15516{15516}
+- Do not load dashboards where not available. {pull}15802[15802]
+- Update replicaset group to apps/v1 {pull}15854[15802]
 
 *Auditbeat*
 
+- system/socket: Fixed compatibility issue with kernel 5.x. {pull}15771[15771]
 
 *Filebeat*
 
-- Change iis url path grok pattern from URIPATH to NOTSPACE. {issue}12710[12710] {pull}13225[13225] {issue}7951[7951] {pull}13378[13378] {pull}14754[14754]
-- Fix azure filesets test files. {issue}14185[14185] {pull}14235[14235]
-- cisco/asa fileset: Fix parsing of 302021 message code. {pull}14519[14519]
-- Fix filebeat azure dashboards, event category should be `Alert`. {pull}14668[14668]
-- Update Logstash module's Grok patterns to support Logstash 7.4 logs. {pull}14743[14743]
+- Fix s3 input hanging with GetObjectRequest API call by adding context_timeout config. {issue}15502[15502] {pull}15590[15590]
+- Add shared_credential_file to cloudtrail config {issue}15652[15652] {pull}15656[15656]
+- Fix typos in zeek notice fileset config file. {issue}15764[15764] {pull}15765[15765]
+- Prevent Elasticsearch from spewing log warnings about redundant wildcards when setting up ingest pipelines for the `elasticsearch` module. {issue}15840[15840] {pull}15900[15900]
+- Improve `elasticsearch/audit` fileset to handle timestamps correctly. {pull}15942[15942]
 
 *Heartbeat*
 
-- Fix recording of SSL cert metadata for Expired/Unvalidated x509 certs. {pull}13687[13687]
+- Fixed excessive memory usage introduced in 7.5 due to over-allocating memory for HTTP checks. {pull}15639[15639]
 
 *Journalbeat*
 
 
 *Metricbeat*
 
-- Fix checking tagsFilter using length in cloudwatch metricset. {pull}14525[14525]
-- Fixed bug with `elasticsearch/cluster_stats` metricset not recording license expiration date correctly. {issue}14541[14541] {pull}14591[14591]
-- Convert indexed ms-since-epoch timestamp fields in `elasticsearch/ml_job` metricset to ints from float64s. {issue}14220[14220] {pull}14222[14222]
-- Fix ARN parsing function to work for ELB ARNs. {pull}14316[14316]
-- Update azure configuration example. {issue}14224[14224]
-- Limit some of the error messages to the logs only {issue}14317[14317] {pull}14327[14327]
-- Fix cloudwatch metricset with names and dimensions in config. {issue}14376[14376] {pull}14391[14391]
-- Fix marshaling of ms-since-epoch values in `elasticsearch/cluster_stats` metricset. {pull}14378[14378]
-- Log bulk failures from bulk API requests to monitoring cluster. {issue}14303[14303] {pull}14356[14356]
-- Fixed bug with `elasticsearch/cluster_stats` metricset not recording license ID in the correct field. {pull}14592[14592]
-- Fix perfmon expanding counter path/adding counter to query when OS language is not english. {issue}14684[14684] {pull}14800[14800]
-- Add extra check on `ignore_non_existent_counters` flag if the PdhExpandWildCardPathW returns no errors but does not expand the counter path successfully in windows/perfmon metricset. {pull}14797[14797]
-- Fix rds metricset from reporting same values for different instances. {pull}14702[14702]
-- Closing handler after verifying the registry key in diskio metricset. {issue}14683[14683] {pull}14759[14759]
-- Fix docker network stats when multiple interfaces are configured. {issue}14586[14586] {pull}14825[14825]
-- Fix ListMetrics pagination in aws module. {issue}14926[14926] {pull}14942[14942]
-- Fix CPU count in docker/cpu in cases where no `online_cpus` are reported {pull}15070[15070]
+- Add dedot for tags in ec2 metricset and cloudwatch metricset. {issue}15843[15843] {pull}15844[15844]
+- Use RFC3339 format for timestamps collected using the SQL module. {pull}15847[15847]
+- Add dedot for cloudwatch metric name. {issue}15916[15916] {pull}15917[15917]
+- Fixed issue `logstash-xpack` module suddenly ceasing to monitor Logstash. {issue}15974[15974] {pull}16044[16044]
 
 *Packetbeat*
 
@@ -96,14 +84,15 @@ https://github.com/elastic/beats/compare/v7.0.0-alpha2...master[Check the HEAD d
 
 *Affecting all Beats*
 
+- Add document_id setting to decode_json_fields processor. {pull}15859[15859]
+
 
 *Auditbeat*
 
 
 *Filebeat*
-
-- `container` and `docker` inputs now support reading of labels and env vars written by docker JSON file logging driver. {issue}8358[8358]
-- Add `index` option to all inputs to directly set a per-input index value. {pull}14010[14010]
+- Set event.outcome field based on googlecloud audit log output. {pull}15731[15731]
+- Add dashboard for AWS vpcflow fileset. {pull}16007[16007]
 
 *Heartbeat*
 
@@ -112,6 +101,7 @@ https://github.com/elastic/beats/compare/v7.0.0-alpha2...master[Check the HEAD d
 
 *Metricbeat*
 
+- Add STAN dashboard {pull}15654[15654]
 
 *Packetbeat*
 

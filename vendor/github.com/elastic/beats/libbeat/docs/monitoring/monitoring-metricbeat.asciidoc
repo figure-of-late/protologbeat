@@ -1,13 +1,15 @@
 [role="xpack"]
 [[monitoring-metricbeat-collection]]
-== Collect {beatname_uc} monitoring data with {metricbeat}
+== Use {metricbeat} to send monitoring data
 [subs="attributes"]
 ++++
 <titleabbrev>{metricbeat} collection</titleabbrev>
 ++++
 
 In 7.3 and later, you can use {metricbeat} to collect data about {beatname_uc} 
-and ship it to the monitoring cluster.
+and ship it to the monitoring cluster. The benefit of using {metricbeat} instead
+of internal collection is that the monitoring agent remains active even if the
+{beatname_uc} instance dies.
 
 ifeval::["{beatname_lc}"=="metricbeat"]
 Because you'll be using {metricbeat} to _monitor_ {beatname_uc}, you'll need to
@@ -221,11 +223,13 @@ output.elasticsearch:
   
   # Optional protocol and basic auth credentials.
   #protocol: "https"
+  #api_key:  "id:api_key" <2>
   #username: "elastic"
   #password: "changeme"
 ----------------------------------
 <1> In this example, the data is stored on a monitoring cluster with nodes 
 `es-mon-1` and `es-mon-2`.
+<2> Specify one of `api_key` or `username`/`password`.
 
 If you configured the monitoring cluster to use encrypted communications, you
 must access it via HTTPS. For example, use a `hosts` setting like
