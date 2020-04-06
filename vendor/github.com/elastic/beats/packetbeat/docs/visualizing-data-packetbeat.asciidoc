@@ -1,5 +1,5 @@
 [[visualizing-data-packetbeat]]
-= Visualize Packetbeat data in Kibana
+= Visualizing Packetbeat data in Kibana
 
 [partintro]
 --

@@ -38,7 +38,7 @@ type AddResourceMetadataConfig struct {
 	Namespace *common.Config `config:"namespace"`
 }
 
-func DefaultConfig() Config {
+func defaultConfig() Config {
 	return Config{
 		IncludeCreatorMetadata: true,
 		LabelsDedot:            true,

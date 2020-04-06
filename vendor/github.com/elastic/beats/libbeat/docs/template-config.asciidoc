@@ -1,10 +1,6 @@
 [[configuration-template]]
 
-== Configure Elasticsearch index template loading
-
-++++
-<titleabbrev>Elasticsearch index template</titleabbrev>
-++++
+== Load the Elasticsearch index template
 
 The `setup.template` section of the +{beatname_lc}.yml+ config file specifies
 the {ref}/indices-templates.html[index template] to use for setting
@@ -15,7 +11,7 @@ connecting to Elasticsearch.
 ifndef::no-output-logstash[]
 
 NOTE: A connection to Elasticsearch is required to load the index template. If
-the configured output is not Elasticsearch (or Elastic Cloud), you must <<load-template-manually,load the template
+the output is Logstash, you must <<load-template-manually,load the template
 manually>>.
 
 endif::[]

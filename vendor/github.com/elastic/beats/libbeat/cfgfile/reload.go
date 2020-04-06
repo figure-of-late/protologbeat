@@ -45,10 +45,6 @@ var (
 
 	debugf = logp.MakeDebug("cfgfile")
 
-	// configScans measures how many times the config dir was scanned for
-	// changes, configReloads measures how many times there were changes that
-	// triggered an actual reload.
-	configScans   = monitoring.NewInt(nil, "libbeat.config.scans")
 	configReloads = monitoring.NewInt(nil, "libbeat.config.reloads")
 	moduleStarts  = monitoring.NewInt(nil, "libbeat.config.module.starts")
 	moduleStops   = monitoring.NewInt(nil, "libbeat.config.module.stops")
@@ -189,11 +185,7 @@ func (rl *Reloader) Run(runnerFactory RunnerFactory) {
 		rl.config.Reload.Period = 0
 	}
 
-	// If forceReload is set, the configuration should be reloaded
-	// even if there are no changes. It is set on the first iteration,
-	// and whenever an attempted reload fails. It is unset whenever
-	// a reload succeeds.
-	forceReload := true
+	overwriteUpdate := true
 
 	for {
 		select {
@@ -203,7 +195,7 @@ func (rl *Reloader) Run(runnerFactory RunnerFactory) {
 
 		case <-time.After(rl.config.Reload.Period):
 			debugf("Scan for new config files")
-			configScans.Add(1)
+			configReloads.Add(1)
 
 			files, updated, err := gw.Scan()
 			if err != nil {
@@ -212,22 +204,21 @@ func (rl *Reloader) Run(runnerFactory RunnerFactory) {
 				logp.Err("Error fetching new config files: %v", err)
 			}
 
-			// if there are no changes, skip this reload unless forceReload is set.
-			if !updated && !forceReload {
+			// no file changes
+			if !updated && !overwriteUpdate {
+				overwriteUpdate = false
 				continue
 			}
-			configReloads.Add(1)
 
 			// Load all config objects
 			configs, _ := rl.loadConfigs(files)
 
 			debugf("Number of module configs found: %v", len(configs))
 
-			err = list.Reload(configs)
-			// Force reload on the next iteration if and only if this one failed.
-			// (Any errors are already logged by list.Reload, so we don't need to
-			// propagate the details further.)
-			forceReload = err != nil
+			if err := list.Reload(configs); err != nil {
+				// Make sure the next run also updates because some runners were not properly loaded
+				overwriteUpdate = true
+			}
 		}
 
 		// Path loading is enabled but not reloading. Loads files only once and then stops.

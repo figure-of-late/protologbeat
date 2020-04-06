@@ -399,7 +399,7 @@ ifeval::["{beatname_lc}"=="functionbeat"]
 Shows help for the `package` command.
 
 *`-o, --output`*::
-Specifies the full path pattern to use when creating the packages. 
+Specifies the full path to the zip file that will contain the package.
 
 {global-flags}
 
@@ -407,7 +407,7 @@ Specifies the full path pattern to use when creating the packages.
 
 ["source","sh",subs="attributes"]
 -----
-{beatname_lc} package --output /path/to/folder/package-{{.Provider}}.zip
+{beatname_lc} package /path/to/file.zip
 -----
 
 [[remove-command]]

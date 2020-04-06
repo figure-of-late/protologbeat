@@ -1,10 +1,8 @@
-The Beat module contains a minimal set of metrics to enable monitoring of any Beat or other software based on libbeat across
-multiple versions. To monitor more Beat metrics, use our {stack}
-{monitor-features}.
+This is the Beat module.
 
 The default metricsets are `state` and `stats`.
 
 [float]
 === Compatibility
 
-The Beat module works with Beats 7.3.0 and later.
+The beat module is tested with metricbeat 7.3.0.

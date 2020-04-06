@@ -1,16 +1,4 @@
-`performance` Metricset includes performance related events that might be correlated between them. It contains mainly cursor and cache based data and can generate 3 types of events.
-
-[float]
-=== Required database access
-
-To ensure that the module has access to the appropriate metrics, the module requires that you configure a user with access to the following tables:
-
-* V$BUFFER_POOL_STATISTICS
-* v$sesstat
-* v$statname
-* v$session
-* v$sysstat
-* V$LIBRARYCACHE
+`performance` Metricset includes performance related events that might be correlated between them. It contains mainly cursor and cache based data and can generate 3 types of events:
 
 [float]
 === Description of fields

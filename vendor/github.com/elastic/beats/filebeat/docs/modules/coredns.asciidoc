@@ -13,19 +13,19 @@ This file is generated! See scripts/docs_collector.py
 This is a filebeat module for CoreDNS. It supports both standalone CoreDNS deployment and
 CoreDNS deployment in Kubernetes.
 
-include::../include/gs-link.asciidoc[]
-
 [float]
 === Compatibility
 
 Although this module has been developed against Kubernetes v1.13.x, it is expected to work
 with other versions of Kubernetes.
 
-include::../include/configuring-intro.asciidoc[]
+[float]
+=== Example dashboard
 
-:fileset_ex: log
+This module comes with a sample dashboard.
 
-include::../include/config-option-intro.asciidoc[]
+[role="screenshot"]
+image::./images/kibana-coredns.jpg[]
 
 [float]
 ==== `log` fileset settings
@@ -46,14 +46,6 @@ include::../include/var-paths.asciidoc[]
 *`var.tags`*::
 
 An array of tags describing the monitored CoreDNS setup.
-
-[float]
-=== Example dashboard
-
-This module comes with a sample dashboard.
-
-[role="screenshot"]
-image::./images/kibana-coredns.jpg[]
 
 
 [float]

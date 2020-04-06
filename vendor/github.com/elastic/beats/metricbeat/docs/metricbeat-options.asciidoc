@@ -1,9 +1,5 @@
 [[configuration-metricbeat]]
-== Configure modules
-
-++++
-<titleabbrev>Modules</titleabbrev>
-++++
+== Specify which modules to run
 
 Metricbeat provides a couple different ways to enable modules and metricsets:
 

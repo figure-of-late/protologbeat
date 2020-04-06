@@ -67,10 +67,9 @@ metricbeat.modules:
     - system
     - volume
   period: 10s
+  hosts: ["localhost:10255"]
   enabled: true
-  hosts: ["https://${HOSTNAME}:10250"]
-  bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-  ssl.verification_mode: "none"
+  #bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
   #ssl.certificate_authorities:
   #  - /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
   #ssl.certificate: "/etc/pki/client/cert.pem"

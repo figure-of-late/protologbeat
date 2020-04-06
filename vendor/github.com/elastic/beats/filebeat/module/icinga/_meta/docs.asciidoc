@@ -8,8 +8,6 @@ https://www.icinga.com/products/icinga-2/[Icinga].
 
 include::../include/what-happens.asciidoc[]
 
-include::../include/gs-link.asciidoc[]
-
 [float]
 === Compatibility
 
@@ -17,6 +15,16 @@ The +{modulename}+ module was tested with Icinga >= 2.x on various Linux and Win
 systems.
 
 This module is not available for macOS.
+
+include::../include/running-modules.asciidoc[]
+
+[float]
+=== Example dashboard
+
+This module comes with sample dashboards. For example:
+
+[role="screenshot"]
+image::./images/kibana-icinga-main.png[]
 
 include::../include/configuring-intro.asciidoc[]
 
@@ -67,14 +75,6 @@ include::../include/var-paths.asciidoc[]
 ==== `startup` log fileset settings
 
 include::../include/var-paths.asciidoc[]
-
-[float]
-=== Example dashboard
-
-This module comes with sample dashboards. For example:
-
-[role="screenshot"]
-image::./images/kibana-icinga-main.png[]
 
 :has-dashboards!:
 

@@ -10,7 +10,7 @@
 //////////////////////////////////////////////////////////////////////////
 
 ["appendix",id="contributing-to-beats"]
-= Contribute to Beats
+= Contributing to Beats
 
 The Beats are open source and we love to receive contributions from our
 community — you!

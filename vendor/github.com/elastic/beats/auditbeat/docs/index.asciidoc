@@ -39,8 +39,6 @@ include::./upgrading.asciidoc[]
 
 include::./configuring-howto.asciidoc[]
 
-include::{docdir}/howto/howto.asciidoc[]
-
 include::./modules.asciidoc[]
 
 include::./fields.asciidoc[]

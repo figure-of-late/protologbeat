@@ -10,11 +10,7 @@
 //////////////////////////////////////////////////////////////////////////
 
 [[http-endpoint]]
-== Configure an HTTP endpoint for metrics
-
-++++
-<titleabbrev>HTTP endpoint</titleabbrev>
-++++
+== HTTP Endpoint
 
 experimental[]
 
@@ -122,7 +118,6 @@ curl -XGET 'localhost:5066/stats?pretty'
         "starts": 0,
         "stops": 0
       },
-      "scans": 1,
       "reloads": 1
     },
     "output": {

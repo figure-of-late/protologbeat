@@ -1,10 +1,6 @@
 [[fingerprint]]
 === Generate a fingerprint of an event
 
-++++
-<titleabbrev>fingerprint</titleabbrev>
-++++
-
 The `fingerprint` processor generates a fingerprint of an event based on a
 specified subset of its fields.
 

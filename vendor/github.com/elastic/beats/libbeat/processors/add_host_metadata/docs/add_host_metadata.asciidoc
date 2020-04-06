@@ -1,10 +1,6 @@
 [[add-host-metadata]]
 === Add Host metadata
 
-++++
-<titleabbrev>add_host_metadata</titleabbrev>
-++++
-
 [source,yaml]
 -------------------------------------------------------------------------------
 processors:

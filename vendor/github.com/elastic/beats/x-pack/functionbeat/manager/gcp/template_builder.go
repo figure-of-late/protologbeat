@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"time"
 
 	cloudfunctions "google.golang.org/api/cloudfunctions/v1"
 	yaml "gopkg.in/yaml.v2"
@@ -114,7 +115,7 @@ func (d *defaultTemplateBuilder) cloudFunction(name string, config *fngcp.Functi
 		Runtime:             runtime,
 		ServiceAccountEmail: config.ServiceAccountEmail,
 		SourceArchiveUrl:    sourceArchiveURL,
-		Timeout:             config.Timeout,
+		Timeout:             config.Timeout.String(),
 		VpcConnector:        config.VPCConnector,
 	}
 }
@@ -141,8 +142,8 @@ func (d *defaultTemplateBuilder) RawTemplate(name string) (string, error) {
 		},
 	}
 
-	if config.Timeout != "" {
-		properties["timeout"] = config.Timeout
+	if config.Timeout > 0*time.Second {
+		properties["timeout"] = config.Timeout.String()
 	}
 	if config.MemorySize != "" {
 		properties["availableMemoryMb"] = config.MemorySize

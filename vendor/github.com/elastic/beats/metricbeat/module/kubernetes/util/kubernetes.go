@@ -116,7 +116,7 @@ func NewResourceMetadataEnricher(
 		return &nilEnricher{}
 	}
 
-	metaConfig := metadata.DefaultConfig()
+	metaConfig := metadata.Config{}
 	if err := base.Module().UnpackConfig(&metaConfig); err != nil {
 		logp.Err("Error initializing Kubernetes metadata enricher: %s", err)
 		return &nilEnricher{}
@@ -201,7 +201,7 @@ func NewContainerMetadataEnricher(
 		return &nilEnricher{}
 	}
 
-	metaConfig := metadata.DefaultConfig()
+	metaConfig := metadata.Config{}
 	if err := base.Module().UnpackConfig(&metaConfig); err != nil {
 		logp.Err("Error initializing Kubernetes metadata enricher: %s", err)
 		return &nilEnricher{}

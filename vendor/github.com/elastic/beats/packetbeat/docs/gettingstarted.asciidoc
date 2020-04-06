@@ -1,9 +1,5 @@
 [[packetbeat-getting-started]]
-== Get started with {beatname_uc}
-
-++++
-<titleabbrev>Get started</titleabbrev>
-++++
+== Getting started with Packetbeat
 
 The best way to understand the value of a network packet analytics system like
 Packetbeat is to try it on your own traffic.

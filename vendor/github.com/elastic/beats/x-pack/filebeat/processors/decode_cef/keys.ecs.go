@@ -45,7 +45,7 @@ var ecsExtensionMapping = map[string]mappedField{
 	"destinationTranslatedPort":    {Target: "destination.nat.port"},
 	"destinationUserId":            {Target: "destination.user.id"},
 	"destinationUserName":          {Target: "destination.user.name"},
-	"destinationUserPrivileges":    {Target: "destination.user.group.name"},
+	"destinationUserPrivileges":    {Target: "destination.user.group"},
 	"deviceAction":                 {Target: "event.action"},
 	"deviceAddress":                {Target: "observer.ip"},
 	"deviceDirection": {
@@ -108,7 +108,7 @@ var ecsExtensionMapping = map[string]mappedField{
 	"sourceTranslatedPort":    {Target: "source.nat.port"},
 	"sourceUserId":            {Target: "source.user.id"},
 	"sourceUserName":          {Target: "source.user.name"},
-	"sourceUserPrivileges":    {Target: "source.user.group.name"},
+	"sourceUserPrivileges":    {Target: "source.user.group"},
 	"startTime":               {Target: "event.start"},
 	"transportProtocol": {
 		Target: "network.transport",

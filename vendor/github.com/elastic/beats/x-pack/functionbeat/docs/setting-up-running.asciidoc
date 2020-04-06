@@ -6,11 +6,7 @@
 
 [[setting-up-and-running]]
 [role="xpack"]
-== Set up and deploy {beatname_uc}
-
-++++
-<titleabbrev>Set up and deploy</titleabbrev>
-++++
+== Setting up and deploying {beatname_uc}
 
 Before reading this section, see the
 <<{beatname_lc}-getting-started,getting started documentation>> for basic

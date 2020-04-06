@@ -1,5 +1,5 @@
 [[upgrading]]
-== Upgrade
+== Upgrading
 
 This section gives general recommendations for upgrading {beats} shippers:
 
@@ -292,7 +292,7 @@ If you want to disable index lifecycle management, set
 `setup.ilm.enabled: false` in the {beats} configuration file.
 
 [[troubleshooting-upgrade]]
-=== Troubleshoot {beats} upgrade issues
+=== Troubleshooting {beats} upgrade issues
 
 This section describes common problems you might encounter when upgrading to
 {beats} 7.x.

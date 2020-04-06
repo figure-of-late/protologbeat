@@ -1,10 +1,6 @@
 [[configuration-general-options]]
 [role="xpack"]
-== Configure general settings
-
-++++
-<titleabbrev>General settings</titleabbrev>
-++++
+== Specify general settings
 
 You can specify settings in the +{beatname_lc}.yml+ config file to control the
 general behavior of {beatname_uc}.

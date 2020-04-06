@@ -10,11 +10,7 @@
 //////////////////////////////////////////////////////////////////////////
 
 [[configuration-dashboards]]
-== Configure Kibana dashboard loading
-
-++++
-<titleabbrev>Kibana dashboards</titleabbrev>
-++++
+== Load the Kibana dashboards
 
 {beatname_uc} comes packaged with example Kibana dashboards, visualizations,
 and searches for visualizing {beatname_uc} data in Kibana.

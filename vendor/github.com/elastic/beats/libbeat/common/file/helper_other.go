@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// +build !aix,!windows
+// +build !windows
 
 package file
 

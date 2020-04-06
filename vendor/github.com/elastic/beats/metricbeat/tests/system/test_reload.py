@@ -44,6 +44,8 @@ class Test(metricbeat.BaseTest):
 
     @unittest.skipUnless(re.match("(?i)win|linux|darwin|freebsd|openbsd", sys.platform), "os")
     def test_start_stop(self):
+        def reload_line(
+            num_runners): return "Starting reload procedure, current runners: %d" % num_runners
         """
         Test if module is properly started and stopped
         """
@@ -59,7 +61,7 @@ class Test(metricbeat.BaseTest):
 
         # Ensure no modules are loaded
         self.wait_until(
-            lambda: self.log_contains("Start list: 0, Stop list: 0"),
+            lambda: self.log_contains(reload_line(0)),
             max_timeout=10)
 
         systemConfig = """
@@ -71,17 +73,17 @@ class Test(metricbeat.BaseTest):
         with open(config_path, 'w') as f:
             f.write(systemConfig)
 
-        # Ensure the module is started
+        # Ensure the module was successfully loaded
         self.wait_until(
-            lambda: self.log_contains("Start list: 1, Stop list: 0"),
+            lambda: self.log_contains(reload_line(1)),
             max_timeout=10)
 
         # Remove config again
         os.remove(config_path)
 
-        # Ensure the module is stopped
+        # Ensure the module was successfully unloaded
         self.wait_until(
-            lambda: self.log_contains("Start list: 0, Stop list: 1"),
+            lambda: self.log_contains(reload_line(0)),
             max_timeout=10)
 
         time.sleep(1)

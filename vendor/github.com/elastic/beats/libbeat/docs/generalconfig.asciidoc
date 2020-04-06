@@ -14,10 +14,6 @@
 [[configuration-general]]
 === General configuration options
 
-++++
-<titleabbrev>General settings</titleabbrev>
-++++
-
 These options are supported by all Elastic Beats. Because they are common
 options, they are not namespaced.
 
