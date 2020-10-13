@@ -18,7 +18,7 @@
 package outputs
 
 import (
-	"github.com/elastic/beats/libbeat/common/transport/tlscommon"
+	"github.com/elastic/beats/v7/libbeat/common/transport/tlscommon"
 )
 
 // Managing TLS option with the outputs package is deprecated move your code to use the tlscommon
@@ -29,10 +29,10 @@ var (
 	ErrNotACertificate = tlscommon.ErrNotACertificate
 
 	// ErrCertificateNoKey indicate a configuration error with missing key file
-	ErrCertificateNoKey = tlscommon.ErrCertificateNoKey
+	ErrCertificateNoKey = tlscommon.ErrKeyUnspecified
 
 	// ErrKeyNoCertificate indicate a configuration error with missing certificate file
-	ErrKeyNoCertificate = tlscommon.ErrKeyNoCertificate
+	ErrKeyNoCertificate = tlscommon.ErrCertificateUnspecified
 )
 
 // TLSConfig defines config file options for TLS clients.

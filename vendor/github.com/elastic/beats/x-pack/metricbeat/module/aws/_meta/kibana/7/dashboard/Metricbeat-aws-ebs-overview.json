@@ -30,7 +30,7 @@
             "panelIndex": "1",
             "panelRefName": "panel_0",
             "title": "Volume Write Ops",
-            "version": "7.4.0"
+            "version": "7.3.0"
           },
           {
             "embeddableConfig": {},
@@ -44,7 +44,7 @@
             "panelIndex": "2",
             "panelRefName": "panel_1",
             "title": "Volume Read Ops",
-            "version": "7.4.0"
+            "version": "7.3.0"
           },
           {
             "embeddableConfig": {},
@@ -58,7 +58,7 @@
             "panelIndex": "3",
             "panelRefName": "panel_2",
             "title": "Volume Write Bytes",
-            "version": "7.4.0"
+            "version": "7.3.0"
           },
           {
             "embeddableConfig": {},
@@ -72,7 +72,7 @@
             "panelIndex": "4",
             "panelRefName": "panel_3",
             "title": "Volume Read Bytes",
-            "version": "7.4.0"
+            "version": "7.3.0"
           },
           {
             "embeddableConfig": {},
@@ -86,7 +86,7 @@
             "panelIndex": "5",
             "panelRefName": "panel_4",
             "title": "Volume Queue Length",
-            "version": "7.4.0"
+            "version": "7.3.0"
           },
           {
             "embeddableConfig": {},
@@ -100,7 +100,7 @@
             "panelIndex": "6",
             "panelRefName": "panel_5",
             "title": "Volume Total Write Time",
-            "version": "7.4.0"
+            "version": "7.3.0"
           },
           {
             "embeddableConfig": {},
@@ -114,7 +114,7 @@
             "panelIndex": "7",
             "panelRefName": "panel_6",
             "title": "Volume Total Read Time",
-            "version": "7.4.0"
+            "version": "7.3.0"
           },
           {
             "embeddableConfig": {},
@@ -128,7 +128,7 @@
             "panelIndex": "8",
             "panelRefName": "panel_7",
             "title": "Volume Idle Time",
-            "version": "7.4.0"
+            "version": "7.3.0"
           },
           {
             "embeddableConfig": {},
@@ -142,7 +142,7 @@
             "panelIndex": "9",
             "panelRefName": "panel_8",
             "title": "EBS Volume ID Filter",
-            "version": "7.4.0"
+            "version": "7.3.0"
           },
           {
             "embeddableConfig": {},
@@ -155,7 +155,7 @@
             },
             "panelIndex": "10",
             "panelRefName": "panel_9",
-            "version": "7.4.0"
+            "version": "7.3.0"
           }
         ],
         "timeRestore": false,
@@ -247,7 +247,7 @@
             "default_index_pattern": "metricbeat-*",
             "default_timefield": "@timestamp",
             "id": "61ca57f0-469d-11e7-af02-69e470af7417",
-            "index_pattern": "",
+            "index_pattern": "metricbeat-*",
             "interval": "5m",
             "isModelInvalid": false,
             "series": [
@@ -319,7 +319,7 @@
             "default_index_pattern": "metricbeat-*",
             "default_timefield": "@timestamp",
             "id": "61ca57f0-469d-11e7-af02-69e470af7417",
-            "index_pattern": "",
+            "index_pattern": "metricbeat-*",
             "interval": "5m",
             "isModelInvalid": false,
             "series": [
@@ -391,7 +391,7 @@
             "default_index_pattern": "metricbeat-*",
             "default_timefield": "@timestamp",
             "id": "61ca57f0-469d-11e7-af02-69e470af7417",
-            "index_pattern": "",
+            "index_pattern": "metricbeat-*",
             "interval": "5m",
             "isModelInvalid": false,
             "series": [
@@ -463,7 +463,7 @@
             "default_index_pattern": "metricbeat-*",
             "default_timefield": "@timestamp",
             "id": "61ca57f0-469d-11e7-af02-69e470af7417",
-            "index_pattern": "",
+            "index_pattern": "metricbeat-*",
             "interval": "5m",
             "isModelInvalid": false,
             "series": [
@@ -535,7 +535,7 @@
             "default_index_pattern": "metricbeat-*",
             "default_timefield": "@timestamp",
             "id": "61ca57f0-469d-11e7-af02-69e470af7417",
-            "index_pattern": "",
+            "index_pattern": "metricbeat-*",
             "interval": "5m",
             "isModelInvalid": false,
             "series": [
@@ -607,7 +607,7 @@
             "default_index_pattern": "metricbeat-*",
             "default_timefield": "@timestamp",
             "id": "61ca57f0-469d-11e7-af02-69e470af7417",
-            "index_pattern": "",
+            "index_pattern": "metricbeat-*",
             "interval": "5m",
             "isModelInvalid": false,
             "series": [
@@ -679,7 +679,7 @@
             "default_index_pattern": "metricbeat-*",
             "default_timefield": "@timestamp",
             "id": "61ca57f0-469d-11e7-af02-69e470af7417",
-            "index_pattern": "",
+            "index_pattern": "metricbeat-*",
             "interval": "5m",
             "isModelInvalid": false,
             "series": [
@@ -751,7 +751,7 @@
             "default_index_pattern": "metricbeat-*",
             "default_timefield": "@timestamp",
             "id": "61ca57f0-469d-11e7-af02-69e470af7417",
-            "index_pattern": "",
+            "index_pattern": "metricbeat-*",
             "interval": "5m",
             "series": [
               {
@@ -916,5 +916,5 @@
       "version": "WzU2NTQsN10="
     }
   ],
-  "version": "7.4.0"
+  "version": "7.3.0"
 }

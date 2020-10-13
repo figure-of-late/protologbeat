@@ -12,30 +12,35 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/aws-sdk-go-v2/service/iam/iamiface"
+	"github.com/aws/aws-sdk-go-v2/service/rds"
 	"github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/pkg/errors"
 
-	"github.com/elastic/beats/libbeat/common"
-	"github.com/elastic/beats/metricbeat/mb"
-	awscommon "github.com/elastic/beats/x-pack/libbeat/common/aws"
+	"github.com/elastic/beats/v7/libbeat/common"
+	"github.com/elastic/beats/v7/metricbeat/mb"
+	awscommon "github.com/elastic/beats/v7/x-pack/libbeat/common/aws"
 )
 
 // Config defines all required and optional parameters for aws metricsets
 type Config struct {
-	Period    time.Duration       `config:"period" validate:"nonzero,required"`
-	Regions   []string            `config:"regions"`
-	AWSConfig awscommon.ConfigAWS `config:",inline"`
+	Period     time.Duration       `config:"period" validate:"nonzero,required"`
+	Regions    []string            `config:"regions"`
+	AWSConfig  awscommon.ConfigAWS `config:",inline"`
+	TagsFilter []Tag               `config:"tags_filter"`
 }
 
 // MetricSet is the base metricset for all aws metricsets
 type MetricSet struct {
 	mb.BaseMetricSet
 	RegionsList []string
+	Endpoint    string
 	Period      time.Duration
 	AwsConfig   *awssdk.Config
 	AccountName string
 	AccountID   string
+	TagsFilter  []Tag
 }
 
 // Tag holds a configuration specific for ec2 and cloudwatch metricset.
@@ -83,48 +88,57 @@ func NewMetricSet(base mb.BaseMetricSet) (*MetricSet, error) {
 		BaseMetricSet: base,
 		Period:        config.Period,
 		AwsConfig:     &awsConfig,
+		TagsFilter:    config.TagsFilter,
 	}
 
-	// Get IAM account name
-	svcIam := iam.New(awsConfig)
-	req := svcIam.ListAccountAliasesRequest(&iam.ListAccountAliasesInput{})
-	output, err := req.Send(context.TODO())
-	if err != nil {
-		base.Logger().Warn("failed to list account aliases, please check permission setting: ", err)
-	} else {
-		// There can be more than one aliases for each account, for now we are only
-		// collecting the first one.
-		if output.AccountAliases != nil {
-			metricSet.AccountName = output.AccountAliases[0]
-		}
+	base.Logger().Debug("Metricset level config for period: ", metricSet.Period)
+	base.Logger().Debug("Metricset level config for tags filter: ", metricSet.TagsFilter)
+
+	// Get IAM account name, set region by aws_partition, default is aws global partition
+	// refer https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html
+	switch config.AWSConfig.AWSPartition {
+	case "aws-cn":
+		awsConfig.Region = "cn-north-1"
+	case "aws-us-gov":
+		awsConfig.Region = "us-gov-east-1"
+	default:
+		awsConfig.Region = "us-east-1"
 	}
 
 	// Get IAM account id
-	svcSts := sts.New(awsConfig)
+	svcSts := sts.New(awscommon.EnrichAWSConfigWithEndpoint(
+		config.AWSConfig.Endpoint, "sts", "", awsConfig))
 	reqIdentity := svcSts.GetCallerIdentityRequest(&sts.GetCallerIdentityInput{})
 	outputIdentity, err := reqIdentity.Send(context.TODO())
 	if err != nil {
 		base.Logger().Warn("failed to get caller identity, please check permission setting: ", err)
 	} else {
 		metricSet.AccountID = *outputIdentity.Account
+		base.Logger().Debug("AWS Credentials belong to account ID: ", metricSet.AccountID)
 	}
+
+	// Get account name/alias
+	svcIam := iam.New(awscommon.EnrichAWSConfigWithEndpoint(
+		config.AWSConfig.Endpoint, "iam", "", awsConfig))
+	metricSet.AccountName = getAccountName(svcIam, base, metricSet)
 
 	// Construct MetricSet with a full regions list
 	if config.Regions == nil {
-		// set default region to make initial aws api call
-		awsConfig.Region = "us-west-1"
-		svcEC2 := ec2.New(awsConfig)
+		svcEC2 := ec2.New(awscommon.EnrichAWSConfigWithEndpoint(
+			config.AWSConfig.Endpoint, "ec2", "", awsConfig))
 		completeRegionsList, err := getRegions(svcEC2)
 		if err != nil {
 			return nil, err
 		}
 
 		metricSet.RegionsList = completeRegionsList
+		base.Logger().Debug("Metricset level config for regions: ", metricSet.RegionsList)
 		return &metricSet, nil
 	}
 
 	// Construct MetricSet with specific regions list from config
 	metricSet.RegionsList = config.Regions
+	base.Logger().Debug("Metricset level config for regions: ", metricSet.RegionsList)
 	return &metricSet, nil
 }
 
@@ -140,6 +154,30 @@ func getRegions(svc ec2iface.ClientAPI) (completeRegionsList []string, err error
 		completeRegionsList = append(completeRegionsList, *region.RegionName)
 	}
 	return
+}
+
+func getAccountName(svc iamiface.ClientAPI, base mb.BaseMetricSet, metricSet MetricSet) string {
+	req := svc.ListAccountAliasesRequest(&iam.ListAccountAliasesInput{})
+	output, err := req.Send(context.TODO())
+
+	accountName := metricSet.AccountID
+	if err != nil {
+		base.Logger().Warn("failed to list account aliases, please check permission setting: ", err)
+		return accountName
+	}
+
+	// When there is no account alias, account ID will be used as cloud.account.name
+	if len(output.AccountAliases) == 0 {
+		accountName = metricSet.AccountID
+		base.Logger().Debug("AWS Credentials belong to account ID: ", metricSet.AccountID)
+		return accountName
+	}
+
+	// There can be more than one aliases for each account, for now we are only
+	// collecting the first one.
+	accountName = output.AccountAliases[0]
+	base.Logger().Debug("AWS Credentials belong to account name: ", metricSet.AccountName)
+	return accountName
 }
 
 // StringInSlice checks if a string is already exists in list and its location
@@ -188,6 +226,12 @@ func CheckTagFiltersExist(tagsFilter []Tag, tags interface{}) bool {
 	case []ec2.Tag:
 		tagsEC2 := tags.([]ec2.Tag)
 		for _, tag := range tagsEC2 {
+			tagKeys = append(tagKeys, *tag.Key)
+			tagValues = append(tagValues, *tag.Value)
+		}
+	case []rds.Tag:
+		tagsRDS := tags.([]rds.Tag)
+		for _, tag := range tagsRDS {
 			tagKeys = append(tagKeys, *tag.Key)
 			tagValues = append(tagValues, *tag.Value)
 		}

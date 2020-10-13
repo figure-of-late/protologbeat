@@ -79,6 +79,25 @@ processors:
       field: related.ip
       value: ["{{source.ip}}", "{{destination.ip}}"]
 
+  - set:
+      field: cloud.provider
+      value: aws
+
+  - set:
+      field: cloud.account.id
+      value: "{{aws.vpcflow.account_id}}"
+      ignore_empty_value: true
+
+  - set:
+      if: "ctx.aws.vpcflow.instance_id != '-'"
+      field: cloud.instance.id
+      value: "{{aws.vpcflow.instance_id}}"
+      ignore_empty_value: true
+
+  - set:
+      field: event.kind
+      value: event
+
 on_failure:
   - set:
       field: "error.message"

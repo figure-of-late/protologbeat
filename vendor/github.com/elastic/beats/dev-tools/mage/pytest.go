@@ -32,6 +32,14 @@ import (
 	"github.com/magefile/mage/sh"
 )
 
+// WINDOWS USERS:
+// The python installer does not create a python3 alias like it does on other
+// platforms. So do verify the version with python.exe --version.
+//
+// Setting up a python virtual environment on a network drive does not work
+// well. So if this applies to your development environment set PYTHON_ENV
+// to point to somewhere on C:\.
+
 const (
 	libbeatRequirements = "{{ elastic_beats_dir}}/libbeat/tests/system/requirements.txt"
 )
@@ -53,13 +61,27 @@ var (
 		"module/*/test_*.py",
 		"module/*/*/test_*.py",
 	}
+
+	// pythonExe points to the python executable to use. The PYTHON_EXE
+	// environment can be used to modify the executable used.
+	// On Windows this defaults to python and on all other platforms this
+	// defaults to python3.
+	pythonExe = EnvOr("PYTHON_EXE", "python3")
 )
+
+func init() {
+	// The python installer for Windows does not setup a python3 alias.
+	if runtime.GOOS == "windows" {
+		pythonExe = EnvOr("PYTHON_EXE", "python")
+	}
+}
 
 // PythonTestArgs are the arguments used for the "python*Test" targets and they
 // define how "nosetests" is invoked.
 type PythonTestArgs struct {
 	TestName            string            // Test name used in logging.
 	Env                 map[string]string // Env vars to add to the current env.
+	Files               []string          // Globs used by nosetests to find tests.
 	XUnitReportFile     string            // File to write the XUnit XML test report to.
 	CoverageProfileFile string            // Test coverage profile file.
 }
@@ -110,9 +132,7 @@ func PythonNoseTest(params PythonTestArgs) error {
 	nosetestsOptions := []string{
 		"--process-timeout=90",
 		"--with-timer",
-	}
-	if mg.Verbose() {
-		nosetestsOptions = append(nosetestsOptions, "-v")
+		"-v",
 	}
 	if params.XUnitReportFile != "" {
 		nosetestsOptions = append(nosetestsOptions,
@@ -121,7 +141,11 @@ func PythonNoseTest(params PythonTestArgs) error {
 		)
 	}
 
-	testFiles, err := FindFiles(nosetestsTestFiles...)
+	files := nosetestsTestFiles
+	if len(params.Files) > 0 {
+		files = params.Files
+	}
+	testFiles, err := FindFiles(files...)
 	if err != nil {
 		return err
 	}
@@ -139,15 +163,30 @@ func PythonNoseTest(params PythonTestArgs) error {
 	}
 
 	defer fmt.Println(">> python test:", params.TestName, "Testing Complete")
-	return sh.RunWith(nosetestsEnv, nosetestsPath, append(nosetestsOptions, testFiles...)...)
+	_, err = sh.Exec(nosetestsEnv, os.Stdout, os.Stderr, nosetestsPath, append(nosetestsOptions, testFiles...)...)
+	return err
 
 	// TODO: Aggregate all the individual code coverage reports and generate
 	// and HTML report.
 }
 
+// PythonNoseTestForModule executes python system tests for modules.
+//
+// Use `MODULE=module` to run only tests for `module`.
+func PythonNoseTestForModule(params PythonTestArgs) error {
+	if module := EnvOr("MODULE", ""); module != "" {
+		params.Files = []string{
+			fmt.Sprintf("module/%s/test_*.py", module),
+			fmt.Sprintf("module/%s/*/test_*.py", module),
+		}
+		params.TestName += "-" + module
+	}
+	return PythonNoseTest(params)
+}
+
 // PythonVirtualenv constructs a virtualenv that contains the given modules as
 // defined in the requirements file pointed to by requirementsTxt. It returns
-// the path to the virutalenv.
+// the path to the virtualenv.
 func PythonVirtualenv() (string, error) {
 	pythonVirtualenvLock.Lock()
 	defer pythonVirtualenvLock.Unlock()
@@ -167,17 +206,9 @@ func PythonVirtualenv() (string, error) {
 		return pythonVirtualenvDir, nil
 	}
 
-	// If set use PYTHON_EXE env var as the python interpreter.
-	var args []string
-	if pythonExe := os.Getenv("PYTHON_EXE"); pythonExe != "" {
-		args = append(args, "-p", pythonExe)
-	}
-	args = append(args, ve)
-
-	// Execute virtualenv.
+	// Create a virtual environment only if the dir does not exist.
 	if _, err := os.Stat(ve); err != nil {
-		// Run virtualenv if the dir does not exist.
-		if err := sh.Run("virtualenv", args...); err != nil {
+		if err := sh.Run(pythonExe, "-m", "venv", ve); err != nil {
 			return "", err
 		}
 	}
@@ -188,15 +219,28 @@ func PythonVirtualenv() (string, error) {
 	}
 
 	pip := virtualenvPath(ve, "pip")
-	args = []string{"install"}
+	pipUpgrade := func(pkg string) error {
+		return sh.RunWith(env, pip, "install", "-U", pkg)
+	}
+
+	// Ensure we are using the latest pip version.
+	if err = pipUpgrade("pip"); err != nil {
+		fmt.Printf("warn: failed to upgrade pip (ignoring): %v", err)
+	}
+
+	// First ensure that wheel is installed so that bdists build cleanly.
+	if err = pipUpgrade("wheel"); err != nil {
+		return "", err
+	}
+
+	// Execute pip to install the dependencies.
+	args := []string{"install"}
 	if !mg.Verbose() {
 		args = append(args, "--quiet")
 	}
 	for _, req := range reqs {
 		args = append(args, "-Ur", req)
 	}
-
-	// Execute pip to install the dependencies.
 	if err := sh.RunWith(env, pip, args...); err != nil {
 		return "", err
 	}

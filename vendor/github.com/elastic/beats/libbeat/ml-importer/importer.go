@@ -30,8 +30,8 @@ import (
 	"github.com/joeshaw/multierror"
 	"github.com/pkg/errors"
 
-	"github.com/elastic/beats/libbeat/common"
-	"github.com/elastic/beats/libbeat/logp"
+	"github.com/elastic/beats/v7/libbeat/common"
+	"github.com/elastic/beats/v7/libbeat/logp"
 )
 
 var (
@@ -209,7 +209,7 @@ func SetupModule(kibanaClient MLSetupper, module, prefix string) error {
 	prefixPayload := fmt.Sprintf("{\"prefix\": \"%s\"}", prefix)
 	status, response, err := kibanaClient.Request("POST", setupURL, nil, nil, strings.NewReader(prefixPayload))
 	if status != 200 {
-		return errors.Errorf("cannot set up ML with prefix: %s", prefix)
+		return errors.Errorf("cannot set up ML with prefix: %s, response: %s", prefix, string(response))
 	}
 	if err != nil {
 		return err

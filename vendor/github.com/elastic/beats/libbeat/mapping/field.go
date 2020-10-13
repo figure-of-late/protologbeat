@@ -134,11 +134,11 @@ func (f *Field) validateType() error {
 		return geoPointType.validate(f.Format)
 	case "date_range":
 		return dateRangeType.validate(f.Format)
-	case "boolean", "binary", "ip", "alias", "array":
+	case "boolean", "binary", "ip", "alias", "array", "histogram":
 		if f.Format != "" {
 			return fmt.Errorf("no format expected for field %s, found: %s", f.Name, f.Format)
 		}
-	case "object", "group", "nested":
+	case "object", "group", "nested", "flattened":
 		// No check for them yet
 	case "":
 		// Module keys, not used as fields
@@ -353,6 +353,10 @@ func (f Fields) getKeys(namespace string) []string {
 			keys = append(keys, fieldName)
 		} else {
 			keys = append(keys, field.Fields.getKeys(fieldName)...)
+		}
+		if field.ObjectType == "histogram" {
+			keys = append(keys, fieldName+".values")
+			keys = append(keys, fieldName+".counts")
 		}
 	}
 

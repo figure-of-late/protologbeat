@@ -24,9 +24,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/elastic/beats/libbeat/beat"
-	"github.com/elastic/beats/libbeat/common"
-	"github.com/elastic/beats/libbeat/logp"
+	"github.com/elastic/beats/v7/libbeat/beat"
+	"github.com/elastic/beats/v7/libbeat/common"
+	"github.com/elastic/beats/v7/libbeat/logp"
 )
 
 const azInstanceIdentityDocument = `{
@@ -79,7 +79,7 @@ func TestRetrieveAzureMetadata(t *testing.T) {
 
 	expected := common.MapStr{
 		"cloud": common.MapStr{
-			"provider": "az",
+			"provider": "azure",
 			"instance": common.MapStr{
 				"id":   "04ab04c3-63de-4709-a9f9-9ab8c0411d5e",
 				"name": "test-az-vm",

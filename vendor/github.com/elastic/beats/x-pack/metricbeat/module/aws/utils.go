@@ -17,8 +17,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi/resourcegroupstaggingapiiface"
 	"github.com/pkg/errors"
 
-	"github.com/elastic/beats/libbeat/common"
-	s "github.com/elastic/beats/libbeat/common/schema"
+	"github.com/elastic/beats/v7/libbeat/common"
+	s "github.com/elastic/beats/v7/libbeat/common/schema"
 )
 
 // GetStartTimeEndTime function uses durationString to create startTime and endTime for queries.
@@ -188,18 +188,28 @@ func GetResourcesTags(svc resourcegroupstaggingapiiface.ClientAPI, resourceTypeF
 		}
 
 		for _, resourceTag := range output.ResourceTagMappingList {
-			identifier, err := findIdentifierFromARN(*resourceTag.ResourceARN)
-			if err != nil {
-				err = errors.Wrap(err, "error findIdentifierFromARN")
+			shortIdentifier, err := FindShortIdentifierFromARN(*resourceTag.ResourceARN)
+			if err == nil {
+				resourceTagMap[shortIdentifier] = resourceTag.Tags
+			} else {
+				err = errors.Wrap(err, "error occurs when proccessing shortIdentifier")
 				return nil, err
 			}
-			resourceTagMap[identifier] = resourceTag.Tags
+
+			wholeIdentifier, err := FindWholeIdentifierFromARN(*resourceTag.ResourceARN)
+			if err == nil {
+				resourceTagMap[wholeIdentifier] = resourceTag.Tags
+			} else {
+				err = errors.Wrap(err, "error occurs when proccessing longIdentifier")
+				return nil, err
+			}
 		}
 	}
 	return resourceTagMap, nil
 }
 
-func findIdentifierFromARN(resourceARN string) (string, error) {
+// FindShortIdentifierFromARN function extracts short resource id from resource filed of ARN.
+func FindShortIdentifierFromARN(resourceARN string) (string, error) {
 	arnParsed, err := arn.Parse(resourceARN)
 	if err != nil {
 		err = errors.Wrap(err, "error Parse arn")
@@ -217,4 +227,14 @@ func findIdentifierFromARN(resourceARN string) (string, error) {
 		return resourceARNSplit[0], nil
 	}
 	return strings.Join(resourceARNSplit[1:], "/"), nil
+}
+
+// FindWholeIdentifierFromARN funtion extracts whole resource filed of ARN
+func FindWholeIdentifierFromARN(resourceARN string) (string, error) {
+	arnParsed, err := arn.Parse(resourceARN)
+	if err != nil {
+		err = errors.Wrap(err, "error Parse arn")
+		return "", err
+	}
+	return arnParsed.Resource, nil
 }

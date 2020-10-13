@@ -39,21 +39,21 @@ import (
 	"github.com/gofrs/uuid"
 	"golang.org/x/text/transform"
 
-	"github.com/elastic/beats/libbeat/beat"
-	"github.com/elastic/beats/libbeat/common"
-	file_helper "github.com/elastic/beats/libbeat/common/file"
-	"github.com/elastic/beats/libbeat/logp"
-	"github.com/elastic/beats/libbeat/monitoring"
+	"github.com/elastic/beats/v7/libbeat/beat"
+	"github.com/elastic/beats/v7/libbeat/common"
+	file_helper "github.com/elastic/beats/v7/libbeat/common/file"
+	"github.com/elastic/beats/v7/libbeat/logp"
+	"github.com/elastic/beats/v7/libbeat/monitoring"
 
-	"github.com/elastic/beats/filebeat/channel"
-	"github.com/elastic/beats/filebeat/harvester"
-	"github.com/elastic/beats/filebeat/input/file"
-	"github.com/elastic/beats/libbeat/reader"
-	"github.com/elastic/beats/libbeat/reader/debug"
-	"github.com/elastic/beats/libbeat/reader/multiline"
-	"github.com/elastic/beats/libbeat/reader/readfile"
-	"github.com/elastic/beats/libbeat/reader/readfile/encoding"
-	"github.com/elastic/beats/libbeat/reader/readjson"
+	"github.com/elastic/beats/v7/filebeat/channel"
+	"github.com/elastic/beats/v7/filebeat/harvester"
+	"github.com/elastic/beats/v7/filebeat/input/file"
+	"github.com/elastic/beats/v7/libbeat/reader"
+	"github.com/elastic/beats/v7/libbeat/reader/debug"
+	"github.com/elastic/beats/v7/libbeat/reader/multiline"
+	"github.com/elastic/beats/v7/libbeat/reader/readfile"
+	"github.com/elastic/beats/v7/libbeat/reader/readfile/encoding"
+	"github.com/elastic/beats/v7/libbeat/reader/readjson"
 )
 
 var (
@@ -83,6 +83,7 @@ type Harvester struct {
 
 	// shutdown handling
 	done     chan struct{}
+	doneWg   *sync.WaitGroup
 	stopOnce sync.Once
 	stopWg   *sync.WaitGroup
 	stopLock sync.Mutex
@@ -132,12 +133,13 @@ func NewHarvester(
 	}
 
 	h := &Harvester{
-		config:        defaultConfig,
+		config:        defaultConfig(),
 		state:         state,
 		states:        states,
 		publishState:  publishState,
 		done:          make(chan struct{}),
 		stopWg:        &sync.WaitGroup{},
+		doneWg:        &sync.WaitGroup{},
 		id:            id,
 		outletFactory: outletFactory,
 	}
@@ -296,7 +298,11 @@ func (h *Harvester) Run() error {
 
 	logp.Info("Harvester started for file: %s", h.state.Source)
 
-	go h.monitorFileSize()
+	h.doneWg.Add(1)
+	go func() {
+		h.monitorFileSize()
+		h.doneWg.Done()
+	}()
 
 	for {
 		select {
@@ -375,7 +381,8 @@ func (h *Harvester) monitorFileSize() {
 func (h *Harvester) stop() {
 	h.stopOnce.Do(func() {
 		close(h.done)
-
+		// Wait for goroutines monitoring h.done to terminate before closing source.
+		h.doneWg.Wait()
 		filesMetrics.Remove(h.id.String())
 	})
 }

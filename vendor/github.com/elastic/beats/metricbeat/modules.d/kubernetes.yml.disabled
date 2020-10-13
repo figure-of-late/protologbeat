@@ -1,5 +1,5 @@
 # Module: kubernetes
-# Docs: https://www.elastic.co/guide/en/beats/metricbeat/7.6/metricbeat-module-kubernetes.html
+# Docs: https://www.elastic.co/guide/en/beats/metricbeat/7.9/metricbeat-module-kubernetes.html
 
 # Node metrics, from kubelet:
 - module: kubernetes
@@ -41,6 +41,7 @@
 #    - state_service
 #    - state_persistentvolume
 #    - state_persistentvolumeclaim
+#    - state_storageclass
 #  period: 10s
 #  hosts: ["kube-state-metrics:8080"]
 #  add_metadata: true

@@ -7,12 +7,11 @@ package mage
 import (
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/magefile/mage/mg"
 
-	devtools "github.com/elastic/beats/dev-tools/mage"
-	"github.com/elastic/beats/dev-tools/mage/gotool"
+	devtools "github.com/elastic/beats/v7/dev-tools/mage"
+	"github.com/elastic/beats/v7/dev-tools/mage/gotool"
 )
 
 // Update target namespace.
@@ -61,27 +60,23 @@ func (Update) VendorBeats() error {
 			return err
 		}
 
-		deps, err := gotool.ListDeps("github.com/elastic/beats/x-pack/functionbeat/provider/gcp/" + f)
+		deps, err := gotool.ListDepsLocation("github.com/elastic/beats/v7/x-pack/functionbeat/provider/gcp/" + f)
 		if err != nil {
 			return err
 		}
 
-		for _, d := range deps {
-			in := strings.ReplaceAll(d, "github.com/elastic/beats/", "")
-			in = filepath.Join("..", "..", in)
-
-			out := strings.ReplaceAll(d, "github.com/elastic/beats/vendor", "")
-
+		for importPath, location := range deps {
 			cp := &devtools.CopyTask{
-				Source: in,
-				Dest:   filepath.Join(gcpVendorPath, out),
-				Mode:   0600,
+				Source:  location,
+				Dest:    filepath.Join(gcpVendorPath, importPath),
+				Mode:    0600,
+				DirMode: os.ModeDir | 0750,
 				Exclude: []string{
 					".*_test.go$",
 					".*.yml",
 				},
 			}
-			err := cp.Execute()
+			err = cp.Execute()
 			if err != nil {
 				return err
 			}

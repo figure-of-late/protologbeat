@@ -18,9 +18,9 @@
 package add_cloud_metadata
 
 import (
-	"github.com/elastic/beats/libbeat/common"
-	s "github.com/elastic/beats/libbeat/common/schema"
-	c "github.com/elastic/beats/libbeat/common/schema/mapstriface"
+	"github.com/elastic/beats/v7/libbeat/common"
+	s "github.com/elastic/beats/v7/libbeat/common/schema"
+	c "github.com/elastic/beats/v7/libbeat/common/schema/mapstriface"
 )
 
 // Azure VM Metadata Service
@@ -46,7 +46,7 @@ var azureVMMetadataFetcher = provider{
 			return out
 		}
 
-		fetcher, err := newMetadataFetcher(config, "az", azHeaders, metadataHost, azSchema, azMetadataURI)
+		fetcher, err := newMetadataFetcher(config, "azure", azHeaders, metadataHost, azSchema, azMetadataURI)
 		return fetcher, err
 	},
 }

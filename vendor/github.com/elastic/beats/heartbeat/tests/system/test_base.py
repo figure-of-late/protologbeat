@@ -1,13 +1,14 @@
+import nose.tools
 import os
 import unittest
 
-from heartbeat import BaseTest
-from elasticsearch import Elasticsearch
 from beat.beat import INTEGRATION_TESTS
-import nose.tools
+from beat import common_tests
+from elasticsearch import Elasticsearch
+from heartbeat import BaseTest
 
 
-class Test(BaseTest):
+class Test(BaseTest, common_tests.TestExportsMixin):
 
     def test_base(self):
         """
@@ -108,7 +109,7 @@ class Test(BaseTest):
         heartbeat_proc.check_kill_and_wait()
         doc = self.read_output()[0]
 
-        assert not doc.has_key("host.name")
+        assert "host.name" not in doc
 
     def run_fields(self, expected, local=None, top=None):
         monitor = {
