@@ -5,7 +5,7 @@
 This application is intended as a replacement for [udplogbeat](https://github.com/hartfordfive/udplogbeat). Although quite similar, it does have some improvements and allows you to start up via either UDP or TCP. It can act accept plain-text or JSON logs and also act as a syslog destination replacement.
 
 Ensure that this folder is at the following location:
-`${GOPATH}/github.com/mmguero`
+`${GOPATH}/github.com/mmguero-dev`
 
 ## Getting Started with Protologbeat
 
@@ -67,7 +67,7 @@ It will create a clean git history for each major step. Note that you can always
 To push Protologbeat in the git repository, run the following commands:
 
 ```
-git remote set-url origin https://github.com/mmguero/protologbeat
+git remote set-url origin https://github.com/mmguero-dev/protologbeat
 git push origin master
 ```
 
@@ -150,9 +150,9 @@ make clean
 To clone Protologbeat from the git repository, run the following commands:
 
 ```
-mkdir -p ${GOPATH}/github.com/mmguero
-cd ${GOPATH}/github.com/mmguero
-git clone https://github.com/mmguero/protologbeat
+mkdir -p ${GOPATH}/github.com/mmguero-dev
+cd ${GOPATH}/github.com/mmguero-dev
+git clone https://github.com/mmguero-dev/protologbeat
 ```
 
 

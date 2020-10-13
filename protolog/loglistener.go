@@ -13,7 +13,7 @@ import (
 	"github.com/elastic/beats/libbeat/logp"
 
 	"github.com/Graylog2/go-gelf/gelf"
-	"github.com/mmguero/protologbeat/config"
+	"github.com/mmguero-dev/protologbeat/config"
 	"github.com/pquerna/ffjson/ffjson"
 	"github.com/xeipuuv/gojsonschema"
 )

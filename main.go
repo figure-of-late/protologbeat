@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-  "github.com/mmguero/protologbeat/cmd"
+  "github.com/mmguero-dev/protologbeat/cmd"
 )
 
 func main() {
