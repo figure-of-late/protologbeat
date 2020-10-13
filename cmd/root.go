@@ -8,4 +8,4 @@ import (
 )
 
 // RootCmd to handle beats cli
-var RootCmd = cmd.GenRootCmdWithSettings(beater.New, instance.Settings{Name: "protologbeat"})
+var RootCmd = cmd.GenRootCmdWithSettings(beater.DefaultCreator(), instance.Settings{Name: "protologbeat"})
