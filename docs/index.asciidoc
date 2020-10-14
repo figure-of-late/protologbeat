@@ -1,5 +1,5 @@
-= Protologbeat Docs
+= {Beat} Docs
 
-Welcome to the Protologbeat documentation.
+Welcome to the {Beat} documentation.
 
 

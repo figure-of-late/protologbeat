@@ -62,7 +62,7 @@ type Fuzz struct {
 	Gp *int32
 	Hp *int64
 
-	Ip *float32
+	IP *float32
 	Jp *float64
 
 	Mp *byte
@@ -149,11 +149,19 @@ func TestFuzzCycle(t *testing.T) {
 	rFF := FfFuzz{}
 	r := Fuzz{}
 	for i := 0; i < 1000; i++ {
-		if true || i > 0 {
-			// TODO: Re-enable after fixing:
-			// https://github.com/pquerna/ffjson/issues/82
+		if i > 0 {
 			f.RandSource(rand.New(rand.NewSource(int64(i * 324221))))
 			f.Fuzz(&r)
+
+			// TODO: remove these after we marshal 0.00000012 to 1.2e-7.
+			r.I = 0
+			r.J = 0
+			r.IP = nil
+			r.Jp = nil
+			r.Ia = []float32{0}
+			r.Ja = []float64{0}
+			r.Iap = nil
+			r.Jap = nil
 		}
 		rFF.A = r.A
 		rFF.B = r.B
@@ -181,7 +189,7 @@ func TestFuzzCycle(t *testing.T) {
 		rFF.Fp = r.Fp
 		rFF.Gp = r.Gp
 		rFF.Hp = r.Hp
-		rFF.Ip = r.Ip
+		rFF.IP = r.IP
 		rFF.Jp = r.Jp
 		rFF.Mp = r.Mp
 		rFF.Np = r.Np
@@ -242,6 +250,12 @@ func TestFuzzOmitCycle(t *testing.T) {
 		if i > 0 {
 			f.RandSource(rand.New(rand.NewSource(int64(i * 324221))))
 			f.Fuzz(&r)
+
+			// TODO: remove these after we marshal 0.00000012 to 1.2e-7.
+			r.J = 0
+			r.Jp = nil
+			r.Ja = []float64{0}
+			r.Jap = nil
 		}
 		rFF.A = r.A
 		rFF.B = r.B
@@ -269,7 +283,7 @@ func TestFuzzOmitCycle(t *testing.T) {
 		rFF.Fp = r.Fp
 		rFF.Gp = r.Gp
 		rFF.Hp = r.Hp
-		rFF.Ip = r.Ip
+		rFF.IP = r.IP
 		rFF.Jp = r.Jp
 		rFF.Mp = r.Mp
 		rFF.Np = r.Np
@@ -363,7 +377,7 @@ func TestFuzzStringCycle(t *testing.T) {
 		rFF.Fp = r.Fp
 		rFF.Gp = r.Gp
 		rFF.Hp = r.Hp
-		rFF.Ip = r.Ip
+		rFF.IP = r.IP
 		rFF.Jp = r.Jp
 		rFF.Mp = r.Mp
 		rFF.Np = r.Np
