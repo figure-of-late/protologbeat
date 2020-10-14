@@ -9,8 +9,8 @@ import (
 	// "strconv"
 	// "time"
 
-	"github.com/elastic/beats/libbeat/common"
-	"github.com/elastic/beats/libbeat/logp"
+	"github.com/elastic/beats/v7/libbeat/common"
+	"github.com/elastic/beats/v7/libbeat/logp"
 
 	"github.com/Graylog2/go-gelf/gelf"
 	"github.com/mmguero-dev/protologbeat/config"

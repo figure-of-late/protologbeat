@@ -32,6 +32,10 @@ ffize: install
 	ffjson -force-regenerate -reset-fields tests/types/ff/everything.go
 	ffjson -force-regenerate tests/number/ff/number.go
 
+lint: ffize
+	go get github.com/golang/lint/golint
+	golint --set_exit_status tests/...
+
 bench: ffize all
 	go test -v -benchmem -bench MarshalJSON  github.com/pquerna/ffjson/tests
 	go test -v -benchmem -bench MarshalJSON  github.com/pquerna/ffjson/tests/goser github.com/pquerna/ffjson/tests/go.stripe
@@ -39,6 +43,7 @@ bench: ffize all
 
 clean:
 	go clean -i github.com/pquerna/ffjson/...
-	rm -rf tests/ff/*_ffjson.go tests/*_ffjson.go tests/ffjson-inception*
+	find . -name '*_ffjson.go' -delete
+	find . -name 'ffjson-inception*' -delete
 
 .PHONY: deps clean test fmt install all

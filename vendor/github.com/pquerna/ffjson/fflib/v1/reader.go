@@ -55,7 +55,7 @@ func (r *ffReader) Reset(d []byte) {
 	r.l = len(d)
 }
 
-// Calcuates the Position with line and line offset,
+// Calculates the Position with line and line offset,
 // because this isn't counted for performance reasons,
 // it will iterate the buffer from the beginning, and should
 // only be used in error-paths.
@@ -121,11 +121,12 @@ func (r *ffReader) ReadByte() (byte, error) {
 	return r.s[r.i-1], nil
 }
 
-func (r *ffReader) UnreadByte() {
+func (r *ffReader) UnreadByte() error {
 	if r.i <= 0 {
 		panic("ffReader.UnreadByte: at beginning of slice")
 	}
 	r.i--
+	return nil
 }
 
 func (r *ffReader) readU4(j int) (rune, error) {
@@ -248,8 +249,6 @@ func (r *ffReader) SliceString(out DecodingBuffer) error {
 		}
 		continue
 	}
-
-	panic("ffjson: SliceString unreached exit")
 }
 
 // TODO(pquerna): consider combining wibth the normal byte mask.

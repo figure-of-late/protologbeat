@@ -1,0 +1,2 @@
+protologbeat:
+  period: 5s
