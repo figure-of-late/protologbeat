@@ -1,5 +1,5 @@
 BEATNAME=protologbeat
-BEAT_DIR=github.com/mmguero/protologbeat
+BEAT_DIR=github.com/mmguero-dev/protologbeat
 SYSTEM_TESTS=false
 TEST_ENVIRONMENT=false
 ES_BEATS?=./vendor/github.com/elastic/beats

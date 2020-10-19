@@ -4,7 +4,7 @@ import (
   "github.com/elastic/beats/libbeat/cmd"
   "github.com/elastic/beats/libbeat/cmd/instance"
 
-	"github.com/mmguero/protologbeat/beater"
+	"github.com/mmguero-dev/protologbeat/beater"
 )
 
 // RootCmd to handle beats cli

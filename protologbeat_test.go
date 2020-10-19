@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/elastic/beats/libbeat/common"
-	"github.com/mmguero/protologbeat/config"
-	"github.com/mmguero/protologbeat/protolog"
+	"github.com/mmguero-dev/protologbeat/config"
+	"github.com/mmguero-dev/protologbeat/protolog"
 
 	"github.com/Graylog2/go-gelf/gelf"
 	"github.com/stretchr/testify/assert"
