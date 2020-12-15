@@ -25,8 +25,7 @@ ELASTIC_LICENSE_FILE?=../licenses/ELASTIC-LICENSE.txt
 SECCOMP_BINARY?=${BEAT_NAME}
 SECCOMP_BLACKLIST?=${ES_BEATS}/libbeat/common/seccomp/seccomp-profiler-blacklist.txt
 SECCOMP_ALLOWLIST?=${ES_BEATS}/libbeat/common/seccomp/seccomp-profiler-allow.txt
-INSTALL_FLAG?=-mod=vendor
-INSTALL_CMD?=install ${INSTALL_FLAG}
+INSTALL_CMD?=install
 export INSTALL_FLAG
 export INSTALL_CMD
 MAGE_PRESENT := $(shell command -v mage 2> /dev/null)
@@ -72,7 +71,7 @@ TESTIFY_TOOL_REPO?=github.com/stretchr/testify/assert
 NOW=$(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
 GOBUILD_FLAGS?=-ldflags "-X github.com/elastic/beats/libbeat/version.buildTime=$(NOW) -X github.com/elastic/beats/libbeat/version.commit=$(COMMIT_ID)"
 GOIMPORTS=goimports
-GOIMPORTS_REPO?=golang.org/x/tools/cmd/goimports
+GOIMPORTS_REPO?=github.com/elastic/beats/vendor/golang.org/x/tools/cmd/goimports
 GOIMPORTS_LOCAL_PREFIX?=github.com/elastic
 GOLINT=golint
 GOLINT_REPO?=golang.org/x/lint/golint
@@ -82,7 +81,7 @@ REVIEWDOG_REPO?=github.com/reviewdog/reviewdog/cmd/reviewdog
 PROCESSES?= 4
 TIMEOUT?= 90
 PYTHON_TEST_FILES?=$(shell find . -type f -name 'test_*.py' -not -path "*/build/*" -not -path "*/vendor/*" 2>/dev/null)
-NOSETESTS_OPTIONS?=--process-timeout=$(TIMEOUT) --with-timer -v --with-xunit --xunit-file=${BUILD_DIR}/TEST-system.xml ## @testing the options to pass when calling nosetests
+PYTEST_OPTIONS?=--timeout=$(TIMEOUT) --durations=20 --junit-xml=${BUILD_DIR}/TEST-system.xml ## @testing the options to pass when calling pytest
 TEST_ENVIRONMENT?=false ## @testing if true, "make testsuite" runs integration tests and system tests in a dockerized test environment
 SYSTEM_TESTS?=false ## @testing if true, "make test" and "make testsuite" run unit tests and system tests
 STRESS_TESTS?=false ## @testing if true, "make test" and "make testsuite" run also run the stress tests
@@ -98,7 +97,6 @@ COMMIT_ID=$(shell git rev-parse HEAD)
 DOCKER_COMPOSE_PROJECT_NAME?=${BEAT_NAME}${TESTING_ENVIRONMENT//-}${BEAT_VERSION//-}${COMMIT_ID} ## @testing The name of the docker-compose project used by the integration and system tests
 DOCKER_COMPOSE?=TESTING_ENVIRONMENT=${TESTING_ENVIRONMENT} ES_BEATS=${ES_BEATS} docker-compose -p ${DOCKER_COMPOSE_PROJECT_NAME} -f docker-compose.yml
 DOCKER_CACHE?=1 ## @miscellaneous If set to 0, all docker images are created without cache
-DOCKER_PULL?=1 ## @miscellaneous If set to 0, disable the force pull on docker-compose build
 GOPACKAGES_COMMA_SEP=$(subst $(space),$(comma),$(strip ${GOPACKAGES}))
 PYTHON_EXE?=python3
 PYTHON_ENV?=${BUILD_DIR}/python-env
@@ -116,10 +114,6 @@ ifeq ($(DOCKER_CACHE),0)
 	DOCKER_NOCACHE=--no-cache
 endif
 
-ifeq ($(DOCKER_PULL),1)
-	DOCKER_FORCE_PULL=--pull
-endif
-
 # Conditionally enable the race detector when RACE_DETECTOR=1.
 ifeq ($(RACE_DETECTOR),1)
 	RACE=-race
@@ -128,7 +122,7 @@ endif
 #
 # Includes
 #
-include $(ES_BEATS)/dev-tools/make/mage.mk
+include $(ES_BEATS)/dev-tools/make/mage-install.mk
 
 ### BUILDING ###
 
@@ -146,7 +140,7 @@ ${BEAT_NAME}.test: $(GOFILES_ALL)
 crosscompile: ## @build Cross-compile beat for the OS'es specified in GOX_OS variable. The binaries are placed in the build/bin directory.
 crosscompile: $(GOFILES)
 ifneq ($(shell [[ $(BEAT_NAME) == journalbeat ]] && echo true ),true)
-	go install -mod=vendor github.com/mitchellh/gox
+	go ${INSTALL_CMD} github.com/mitchellh/gox
 	mkdir -p ${BUILD_DIR}/bin
 	gox -output="${BUILD_DIR}/bin/{{.Dir}}-{{.OS}}-{{.Arch}}" -os="$(strip $(GOX_OS))" -osarch="$(strip $(GOX_OSARCH))" ${GOX_FLAGS}
 endif
@@ -175,7 +169,7 @@ fmt: add-headers python-env ## @build Runs `goimports -l -w` and `autopep8`on th
 
 .PHONY: lint
 lint:
-	@go install -mod=vendor $(GOLINT_REPO) $(REVIEWDOG_REPO)
+	@go {INSTALL_CMD} $(GOLINT_REPO) $(REVIEWDOG_REPO)
 	$(REVIEWDOG) $(REVIEWDOG_OPTIONS)
 
 .PHONY: clean
@@ -200,11 +194,14 @@ prepare-tests:
 	go ${INSTALL_CMD} ${COVERAGE_TOOL_REPO}
 	# testify is needed for unit and integration tests
 	go ${INSTALL_CMD} ${TESTIFY_TOOL_REPO}
+	# Avoid running yacc to generate a parser for dependency.
+	touch -c ../vendor/github.com/yuin/gopher-lua/parse/parser.go.c
 
 .PHONY: unit-tests
 unit-tests: ## @testing Runs the unit tests with coverage.  Race is not enabled for unit tests because tests run much slower.
 unit-tests: prepare-tests
-	$(COVERAGE_TOOL) $(RACE) -coverprofile=${COVERAGE_DIR}/unit.cov  ${GOPACKAGES}
+	GOFLAGS="${INSTALL_FLAG}" \
+		$(COVERAGE_TOOL) $(RACE) -coverprofile=${COVERAGE_DIR}/unit.cov  ${GOPACKAGES}
 
 .PHONY: unit
 unit: ## @testing Runs the unit tests without coverage reports.
@@ -214,7 +211,8 @@ unit: ## @testing Runs the unit tests without coverage reports.
 integration-tests: ## @testing Run integration tests. Unit tests are run as part of the integration tests.
 integration-tests: prepare-tests mage
 	rm -f docker-compose.yml.lock
-	$(COVERAGE_TOOL) -tags=integration $(RACE) -coverprofile=${COVERAGE_DIR}/integration.cov ${GOPACKAGES}
+	GOFLAGS="${INSTALL_FLAG}" \
+		$(COVERAGE_TOOL) -tags=integration $(RACE) -coverprofile=${COVERAGE_DIR}/integration.cov ${GOPACKAGES}
 
 .PHONY: integration-tests-environment
 integration-tests-environment:  ## @testing Runs the integration inside a virtual environment. This can be run on any docker-machine (local, remote)
@@ -228,7 +226,7 @@ integration-tests-environment: prepare-tests build-image
 	  -e RACE_DETECTOR=$(RACE_DETECTOR) \
 	  -e DOCKER_COMPOSE_PROJECT_NAME=${DOCKER_COMPOSE_PROJECT_NAME} \
 	  -e TEST_ENVIRONMENT=${TEST_ENVIRONMENT} \
-	  -e BEATS_DOCKER_INTEGRATION_TEST_ENV=${BEATS_DOCKER_INTEGRATION_TEST_ENV} \
+	  -e BEATS_INSIDE_INTEGRATION_TEST_ENV=${BEATS_INSIDE_INTEGRATION_TEST_ENV} \
 	  -e GOFLAGS=${INSTALL_FLAG} \
 	  beat make integration-tests
 
@@ -236,7 +234,7 @@ integration-tests-environment: prepare-tests build-image
 .PHONY: system-tests
 system-tests: ## @testing Runs the system tests
 system-tests: prepare-tests ${BEAT_NAME}.test python-env
-	. ${PYTHON_ENV}/bin/activate; INTEGRATION_TESTS=${INTEGRATION_TESTS} TESTING_ENVIRONMENT=${TESTING_ENVIRONMENT} DOCKER_COMPOSE_PROJECT_NAME=${DOCKER_COMPOSE_PROJECT_NAME} nosetests ${PYTHON_TEST_FILES} ${NOSETESTS_OPTIONS}
+	. ${PYTHON_ENV}/bin/activate; INTEGRATION_TESTS=${INTEGRATION_TESTS} TESTING_ENVIRONMENT=${TESTING_ENVIRONMENT} DOCKER_COMPOSE_PROJECT_NAME=${DOCKER_COMPOSE_PROJECT_NAME} pytest ${PYTHON_TEST_FILES} ${PYTEST_OPTIONS}
 	${PYTHON_ENV_EXE} ${ES_BEATS}/dev-tools/aggregate_coverage.py -o ${COVERAGE_DIR}/system.cov ${BUILD_DIR}/system-tests/run
 
 # Runs the system tests
@@ -254,7 +252,7 @@ system-tests-environment: prepare-tests build-image
 .PHONY: fast-system-tests
 fast-system-tests: ## @testing Runs system tests without coverage reports and in parallel
 fast-system-tests: ${BEAT_NAME}.test python-env
-	. ${PYTHON_ENV}/bin/activate; nosetests ${PYTHON_TEST_FILES} ${NOSETESTS_OPTIONS}
+	. ${PYTHON_ENV}/bin/activate; pytest ${PYTHON_TEST_FILES} ${PYTEST_OPTIONS}
 
 # Runs the go based stress tests
 .PHONY: stress-tests
@@ -273,7 +271,7 @@ benchmark-tests: ## @testing Runs benchmarks (NOT YET IMPLEMENTED)
 # Run load tests
 .PHONY: load-tests
 load-tests: ## @testing Runs load tests
-	. ${PYTHON_ENV}/bin/activate; LOAD_TESTS=1  nosetests ${PYTHON_TEST_FILES} --processes=$(PROCESSES) --process-timeout=$(TIMEOUT) -a 'load'
+	. ${PYTHON_ENV}/bin/activate; LOAD_TESTS=1 pytest ${PYTHON_TEST_FILES} --processes=$(PROCESSES) --timeout=$(TIMEOUT) -a 'load'
 
 # Sets up the virtual python environment
 .PHONY: python-env
@@ -359,7 +357,7 @@ update: python-env fields collect config ## @build Update expects the most recen
 
 ifneq ($(shell [[ $(BEAT_NAME) == libbeat || $(BEAT_NAME) == metricbeat ]] && echo true ),true)
 	mkdir -p include
-	go run  ${ES_BEATS}/dev-tools/cmd/asset/asset.go -license $(LICENSE) -pkg include -in fields.yml -out include/fields.go $(BEAT_NAME)
+	go run ${INSTALL_FLAG} ${ES_BEATS}/dev-tools/cmd/asset/asset.go -license $(LICENSE) -pkg include -in fields.yml -out include/fields.go $(BEAT_NAME)
 endif
 
 ifneq ($(shell [[ $(BEAT_NAME) == libbeat || $(BEAT_NAME) == metricbeat ]] && echo true ),true)
@@ -402,7 +400,7 @@ $(.OVER)import-dashboards: update ${BEAT_NAME}
 # Builds the environment to test beat
 .PHONY: build-image
 build-image: write-environment
-	${DOCKER_COMPOSE} build ${DOCKER_NOCACHE} ${DOCKER_FORCE_PULL} --force-rm
+	${DOCKER_COMPOSE} build ${DOCKER_NOCACHE} --pull --force-rm
 
 # Runs the environment so the redis and elasticsearch can also be used for local development
 # To use it for running the test, set ES_HOST and REDIS_HOST environment variable to the ip of your docker-machine.
@@ -443,7 +441,8 @@ env-logs:
 	${DOCKER_COMPOSE} logs -f
 
 fix-permissions:
-	sh ${ES_BEATS}/script/fix_permissions.sh "${PWD}"
+	# Change ownership of all files inside /build folder from root/root to current user/group
+	docker run -v ${PWD}:/beat alpine:3.4 sh -c "find /beat -user 0 -exec chown -h $(shell id -u):$(shell id -g) {} \;"
 
 set_version: ## @packaging VERSION=x.y.z set the version of the beat to x.y.z
 	${ES_BEATS}/dev-tools/set_version ${VERSION}
@@ -491,7 +490,3 @@ ifdef NO_COLLECT
 .PHONY: collect
 collect:
 endif
-
-.PHONY: vendor
-vendor:
-	@mage vendor

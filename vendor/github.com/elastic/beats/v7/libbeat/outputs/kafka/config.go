@@ -20,6 +20,8 @@ package kafka
 import (
 	"errors"
 	"fmt"
+	"math"
+	"math/rand"
 	"strings"
 	"time"
 
@@ -36,6 +38,11 @@ import (
 	"github.com/elastic/beats/v7/libbeat/monitoring/adapter"
 	"github.com/elastic/beats/v7/libbeat/outputs/codec"
 )
+
+type backoffConfig struct {
+	Init time.Duration `config:"init"`
+	Max  time.Duration `config:"max"`
+}
 
 type kafkaConfig struct {
 	Hosts              []string                  `config:"hosts"               validate:"required"`
@@ -55,18 +62,12 @@ type kafkaConfig struct {
 	BulkMaxSize        int                       `config:"bulk_max_size"`
 	BulkFlushFrequency time.Duration             `config:"bulk_flush_frequency"`
 	MaxRetries         int                       `config:"max_retries"         validate:"min=-1,nonzero"`
+	Backoff            backoffConfig             `config:"backoff"`
 	ClientID           string                    `config:"client_id"`
 	ChanBufferSize     int                       `config:"channel_buffer_size" validate:"min=1"`
 	Username           string                    `config:"username"`
 	Password           string                    `config:"password"`
 	Codec              codec.Config              `config:"codec"`
-	Sasl               saslConfig                `config:"sasl"`
-}
-
-type saslConfig struct {
-	SaslMechanism string `config:"mechanism"`
-	//SaslUsername  string `config:"username"` //maybe use ssl.username ssl.password instead in future?
-	//SaslPassword  string `config:"password"`
 }
 
 type metaConfig struct {
@@ -81,9 +82,6 @@ type metaRetryConfig struct {
 }
 
 var compressionModes = map[string]sarama.CompressionCodec{
-	// As of sarama 1.24.1, zstd support is broken
-	// (https://github.com/Shopify/sarama/issues/1252), which needs to be
-	// addressed before we add support here.
 	"none":   sarama.CompressionNone,
 	"no":     sarama.CompressionNone,
 	"off":    sarama.CompressionNone,
@@ -91,12 +89,6 @@ var compressionModes = map[string]sarama.CompressionCodec{
 	"lz4":    sarama.CompressionLZ4,
 	"snappy": sarama.CompressionSnappy,
 }
-
-const (
-	saslTypePlaintext   = sarama.SASLTypePlaintext
-	saslTypeSCRAMSHA256 = sarama.SASLTypeSCRAMSHA256
-	saslTypeSCRAMSHA512 = sarama.SASLTypeSCRAMSHA512
-)
 
 func defaultConfig() kafkaConfig {
 	return kafkaConfig{
@@ -122,37 +114,15 @@ func defaultConfig() kafkaConfig {
 		CompressionLevel: 4,
 		Version:          kafka.Version("1.0.0"),
 		MaxRetries:       3,
-		ClientID:         "beats",
-		ChanBufferSize:   256,
-		Username:         "",
-		Password:         "",
+		Backoff: backoffConfig{
+			Init: 1 * time.Second,
+			Max:  60 * time.Second,
+		},
+		ClientID:       "beats",
+		ChanBufferSize: 256,
+		Username:       "",
+		Password:       "",
 	}
-}
-
-func (c *saslConfig) configureSarama(config *sarama.Config) error {
-	switch strings.ToUpper(c.SaslMechanism) { // try not to force users to use all upper case
-	case "":
-		// SASL is not enabled
-		return nil
-	case saslTypePlaintext:
-		config.Net.SASL.Mechanism = sarama.SASLMechanism(sarama.SASLTypePlaintext)
-	case saslTypeSCRAMSHA256:
-		config.Net.SASL.Handshake = true
-		config.Net.SASL.Mechanism = sarama.SASLMechanism(sarama.SASLTypeSCRAMSHA256)
-		config.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient {
-			return &XDGSCRAMClient{HashGeneratorFcn: SHA256}
-		}
-	case saslTypeSCRAMSHA512:
-		config.Net.SASL.Handshake = true
-		config.Net.SASL.Mechanism = sarama.SASLMechanism(sarama.SASLTypeSCRAMSHA512)
-		config.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient {
-			return &XDGSCRAMClient{HashGeneratorFcn: SHA512}
-		}
-	default:
-		return fmt.Errorf("not valid mechanism '%v', only supported with PLAIN|SCRAM-SHA-512|SCRAM-SHA-256", c.SaslMechanism)
-	}
-
-	return nil
 }
 
 func readConfig(cfg *common.Config) (*kafkaConfig, error) {
@@ -186,6 +156,7 @@ func (c *kafkaConfig) Validate() error {
 			return fmt.Errorf("compression_level must be between 0 and 9")
 		}
 	}
+
 	return nil
 }
 
@@ -210,13 +181,12 @@ func newSaramaConfig(log *logp.Logger, config *kafkaConfig) (*sarama.Config, err
 	if err != nil {
 		return nil, err
 	}
-
 	if tls != nil {
 		k.Net.TLS.Enable = true
 		k.Net.TLS.Config = tls.BuildModuleConfig("")
 	}
 
-	if config.Kerberos != nil {
+	if config.Kerberos.IsEnabled() {
 		cfgwarn.Beta("Kerberos authentication for Kafka is beta.")
 
 		k.Net.SASL.Enable = true
@@ -236,11 +206,6 @@ func newSaramaConfig(log *logp.Logger, config *kafkaConfig) (*sarama.Config, err
 		k.Net.SASL.Enable = true
 		k.Net.SASL.User = config.Username
 		k.Net.SASL.Password = config.Password
-		err = config.Sasl.configureSarama(k)
-
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	// configure metadata update properties
@@ -272,7 +237,7 @@ func newSaramaConfig(log *logp.Logger, config *kafkaConfig) (*sarama.Config, err
 		retryMax = 1000
 	}
 	k.Producer.Retry.Max = retryMax
-	// TODO: k.Producer.Retry.Backoff = ?
+	k.Producer.Retry.BackoffFunc = makeBackoffFunc(config.Backoff)
 
 	// configure per broker go channel buffering
 	k.ChannelBufferSize = config.ChanBufferSize
@@ -306,4 +271,24 @@ func newSaramaConfig(log *logp.Logger, config *kafkaConfig) (*sarama.Config, err
 		return nil, err
 	}
 	return k, nil
+}
+
+// makeBackoffFunc returns a stateless implementation of exponential-backoff-with-jitter. It is conceptually
+// equivalent to the stateful implementation used by other outputs, EqualJitterBackoff.
+func makeBackoffFunc(cfg backoffConfig) func(retries, maxRetries int) time.Duration {
+	maxBackoffRetries := int(math.Ceil(math.Log2(float64(cfg.Max) / float64(cfg.Init))))
+
+	return func(retries, _ int) time.Duration {
+		// compute 'base' duration for exponential backoff
+		dur := cfg.Max
+		if retries < maxBackoffRetries {
+			dur = time.Duration(uint64(cfg.Init) * uint64(1<<retries))
+		}
+
+		// apply about equaly distributed jitter in second half of the interval, such that the wait
+		// time falls into the interval [dur/2, dur]
+		limit := int64(dur / 2)
+		jitter := rand.Int63n(limit + 1)
+		return time.Duration(limit + jitter)
+	}
 }

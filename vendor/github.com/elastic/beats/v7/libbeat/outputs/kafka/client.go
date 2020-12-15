@@ -18,6 +18,7 @@
 package kafka
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -126,7 +127,7 @@ func (c *client) Close() error {
 	return nil
 }
 
-func (c *client) Publish(batch publisher.Batch) error {
+func (c *client) Publish(_ context.Context, batch publisher.Batch) error {
 	events := batch.Events()
 	c.observer.NewBatch(len(events))
 
@@ -259,7 +260,6 @@ func (r *msgRef) fail(msg *message, err error) {
 		r.client.log.Errorf("Kafka (topic=%v): dropping too large message of size %v.",
 			msg.topic,
 			len(msg.key)+len(msg.value))
-		r.client.observer.Dropped(1)
 
 	default:
 		r.failed = append(r.failed, msg.data)

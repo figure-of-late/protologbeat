@@ -30,6 +30,8 @@ import (
 const (
 	//DashboardKey used for registering dashboards in setup cmd
 	DashboardKey = "dashboards"
+	//MachineLearningKey used for registering ml jobs in setup cmd
+	MachineLearningKey = "machine-learning"
 	//PipelineKey used for registering pipelines in setup cmd
 	PipelineKey = "pipelines"
 	//IndexManagementKey used for loading all components related to ES index management in setup cmd
@@ -67,6 +69,7 @@ func genSetupCmd(settings instance.Settings, beatCreator beat.Creator) *cobra.Co
 
 			var registeredFlags = map[string]bool{
 				DashboardKey:       false,
+				MachineLearningKey: false,
 				PipelineKey:        false,
 				IndexManagementKey: false,
 				TemplateKey:        false,
@@ -97,6 +100,8 @@ func genSetupCmd(settings instance.Settings, beatCreator beat.Creator) *cobra.Co
 					switch k {
 					case DashboardKey:
 						s.Dashboard = true
+					case MachineLearningKey:
+						s.MachineLearning = true
 					case PipelineKey:
 						s.Pipeline = true
 					case IndexManagementKey:
@@ -109,6 +114,13 @@ func genSetupCmd(settings instance.Settings, beatCreator beat.Creator) *cobra.Co
 				}
 			}
 
+			// XXX this is a workaround for installing index template patterns
+			// before enabling ML for modules
+			if s.MachineLearning && !s.Dashboard {
+				fmt.Fprintf(os.Stderr, "--dashboards must be specified when choosing --machine-learning\n")
+				os.Exit(1)
+			}
+
 			if err = beat.Setup(settings, beatCreator, s); err != nil {
 				os.Exit(1)
 			}
@@ -116,6 +128,7 @@ func genSetupCmd(settings instance.Settings, beatCreator beat.Creator) *cobra.Co
 	}
 
 	setup.Flags().Bool(DashboardKey, false, "Setup dashboards")
+	setup.Flags().Bool(MachineLearningKey, false, "Setup machine learning job configurations")
 	setup.Flags().Bool(PipelineKey, false, "Setup Ingest pipelines")
 	setup.Flags().Bool(IndexManagementKey, false,
 		"Setup all components related to Elasticsearch index management, including template, ilm policy and rollover alias")

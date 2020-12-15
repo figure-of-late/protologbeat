@@ -1,12 +1,13 @@
-from base import BaseTest
 import os
-from elasticsearch import Elasticsearch
-import re
-from nose.plugins.attrib import attr
-import unittest
-import requests
+import pytest
 import random
+import re
+import requests
 import string
+import unittest
+
+from base import BaseTest
+from elasticsearch import Elasticsearch
 
 INTEGRATION_TESTS = os.environ.get('INTEGRATION_TESTS', False)
 
@@ -21,7 +22,7 @@ class Test(BaseTest):
         self.es_monitoring = Elasticsearch([self.get_elasticsearch_monitoring_url()])
 
     @unittest.skipUnless(INTEGRATION_TESTS, "integration test")
-    @attr('integration')
+    @pytest.mark.tag('integration')
     def test_via_output_cluster(self):
         """
         Test shipping monitoring data via the elasticsearch output cluster.
@@ -45,26 +46,33 @@ class Test(BaseTest):
 
         proc = self.start_beat(config="mockbeat.yml")
         self.wait_until(lambda: self.log_contains("mockbeat start running."))
-        self.wait_until(lambda: self.log_contains(re.compile("\[monitoring\].*Publish event")))
+        self.wait_until(lambda: self.log_contains(re.compile(r"\[monitoring\].*Publish event")))
         self.wait_until(lambda: self.log_contains(re.compile(
-            "Connection to .*elasticsearch\("+self.get_elasticsearch_url()+"\).* established")))
+            r"Connection to .*elasticsearch\({}\).* established".format(self.get_elasticsearch_monitoring_url()))))
         self.wait_until(lambda: self.monitoring_doc_exists('beats_stats'))
         self.wait_until(lambda: self.monitoring_doc_exists('beats_state'))
 
         proc.check_kill_and_wait()
 
         for monitoring_doc_type in ['beats_stats', 'beats_state']:
-            field_names = ['cluster_uuid', 'timestamp', 'interval_ms', 'type', 'source_node', monitoring_doc_type]
-            self.assert_monitoring_doc_contains_fields(monitoring_doc_type, field_names)
+            field_names = [
+                'cluster_uuid',
+                'timestamp',
+                'interval_ms',
+                'type',
+                'source_node',
+                monitoring_doc_type,
+            ]
+            self.assert_monitoring_doc_contains_fields(
+                monitoring_doc_type, field_names)
 
     @unittest.skipUnless(INTEGRATION_TESTS, "integration test")
-    @attr('integration')
+    @pytest.mark.tag('integration')
     def test_direct_to_monitoring_cluster(self):
         """
         Test shipping monitoring data directly to the monitoring cluster.
         Make sure expected documents are indexed in monitoring cluster.
         """
-
         self.render_config_template(
             "mockbeat",
             monitoring={
@@ -79,20 +87,28 @@ class Test(BaseTest):
 
         proc = self.start_beat(config="mockbeat.yml")
         self.wait_until(lambda: self.log_contains("mockbeat start running."))
-        self.wait_until(lambda: self.log_contains(re.compile("\[monitoring\].*Publish event")))
+        self.wait_until(
+            lambda: self.log_contains(
+                re.compile(r"\[monitoring\].*Publish event")))
         self.wait_until(lambda: self.log_contains(re.compile(
-            "Connection to .*elasticsearch\("+self.get_elasticsearch_monitoring_url()+"\).* established")))
+            r"Connection to .*elasticsearch\({}\).* established".format(self.get_elasticsearch_monitoring_url()))))
         self.wait_until(lambda: self.monitoring_doc_exists('beats_stats'))
         self.wait_until(lambda: self.monitoring_doc_exists('beats_state'))
 
         proc.check_kill_and_wait()
 
         for monitoring_doc_type in ['beats_stats', 'beats_state']:
-            field_names = ['cluster_uuid', 'timestamp', 'interval_ms', 'type', monitoring_doc_type]
+            field_names = [
+                'cluster_uuid',
+                'timestamp',
+                'interval_ms',
+                'type',
+                monitoring_doc_type,
+            ]
             self.assert_monitoring_doc_contains_fields(monitoring_doc_type, field_names)
 
     @unittest.skipUnless(INTEGRATION_TESTS, "integration test")
-    @attr('integration')
+    @pytest.mark.tag('integration')
     def test_compare(self):
         """
         Test that monitoring docs are the same, regardless of how they are shipped.
@@ -115,9 +131,9 @@ class Test(BaseTest):
 
         proc = self.start_beat(config="mockbeat.yml")
         self.wait_until(lambda: self.log_contains("mockbeat start running."))
-        self.wait_until(lambda: self.log_contains(re.compile("\[monitoring\].*Publish event")))
+        self.wait_until(lambda: self.log_contains(re.compile(r"\[monitoring\].*Publish event")))
         self.wait_until(lambda: self.log_contains(re.compile(
-            "Connection to .*elasticsearch\("+self.get_elasticsearch_url()+"\).* established")))
+            r"Connection to .*elasticsearch\({}\).* established".format(self.get_elasticsearch_url()))))
         self.wait_until(lambda: self.monitoring_doc_exists('beats_stats'))
         self.wait_until(lambda: self.monitoring_doc_exists('beats_state'))
 
@@ -140,9 +156,9 @@ class Test(BaseTest):
 
         proc = self.start_beat(config="mockbeat.yml")
         self.wait_until(lambda: self.log_contains("mockbeat start running."))
-        self.wait_until(lambda: self.log_contains(re.compile("\[monitoring\].*Publish event")))
+        self.wait_until(lambda: self.log_contains(re.compile(r"\[monitoring\].*Publish event")))
         self.wait_until(lambda: self.log_contains(re.compile(
-            "Connection to .*elasticsearch\("+self.get_elasticsearch_monitoring_url()+"\).* established")))
+            r"Connection to .*elasticsearch\({}\).* established".format(self.get_elasticsearch_monitoring_url()))))
         self.wait_until(lambda: self.monitoring_doc_exists('beats_stats'))
         self.wait_until(lambda: self.monitoring_doc_exists('beats_state'))
 
@@ -155,7 +171,7 @@ class Test(BaseTest):
         self.assert_same_structure(indirect_beats_stats_doc['beats_stats'], direct_beats_stats_doc['beats_stats'])
 
     @unittest.skipUnless(INTEGRATION_TESTS, "integration test")
-    @attr('integration')
+    @pytest.mark.tag('integration')
     def test_cluster_uuid_setting(self):
         """
         Test that monitoring.cluster_uuid setting may be set without any other monitoring.* settings
@@ -178,7 +194,7 @@ class Test(BaseTest):
         self.assertEqual(test_cluster_uuid, state["monitoring"]["cluster_uuid"])
 
     @unittest.skipUnless(INTEGRATION_TESTS, "integration test")
-    @attr('integration')
+    @pytest.mark.tag('integration')
     def test_cluster_uuid_setting_monitoring_disabled(self):
         """
         Test that monitoring.cluster_uuid setting may be set with monitoring.enabled explicitly set to false
@@ -204,7 +220,7 @@ class Test(BaseTest):
     def search_monitoring_doc(self, monitoring_type):
         results = self.es_monitoring.search(
             index='.monitoring-beats-*',
-            q='type:'+monitoring_type,
+            q='type:' + monitoring_type,
             size=1
         )
         return results['hits']['hits']
@@ -222,7 +238,7 @@ class Test(BaseTest):
     def assert_monitoring_doc_contains_fields(self, monitoring_type, field_names):
         results = self.es_monitoring.search(
             index='.monitoring-beats-*',
-            q='type:'+monitoring_type,
+            q='type:' + monitoring_type,
             size=1
         )
         hits = results['hits']['hits']

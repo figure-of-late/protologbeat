@@ -28,7 +28,7 @@ The simple configuration below enables the processor.
 [source,yaml]
 -------------------------------------------------------------------------------
 processors:
-- add_cloud_metadata: ~
+  - add_cloud_metadata: ~
 -------------------------------------------------------------------------------
 
 The `add_cloud_metadata` processor has three optional configuration settings.
@@ -143,7 +143,7 @@ _Azure Virtual Machine_
 -------------------------------------------------------------------------------
 {
   "cloud": {
-    "provider": "az",
+    "provider": "azure",
     "instance.id": "04ab04c3-63de-4709-a9f9-9ab8c0411d5e",
     "instance.name": "test-az-vm",
     "machine.type": "Standard_D3_v2",

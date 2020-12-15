@@ -20,6 +20,7 @@
 package eslegclient
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -37,6 +38,7 @@ func TestBulk(t *testing.T) {
 		{
 			"index": map[string]interface{}{
 				"_index": index,
+				"_type":  "type1",
 				"_id":    "1",
 			},
 		},
@@ -53,7 +55,7 @@ func TestBulk(t *testing.T) {
 	params := map[string]string{
 		"refresh": "true",
 	}
-	_, _, err := client.Bulk(index, "", params, body)
+	_, _, err := client.Bulk(context.Background(), index, "type1", params, body)
 	if err != nil {
 		t.Fatalf("Bulk() returned error: %s", err)
 	}
@@ -86,7 +88,7 @@ func TestEmptyBulk(t *testing.T) {
 	params := map[string]string{
 		"refresh": "true",
 	}
-	_, resp, err := client.Bulk(index, "", params, body)
+	_, resp, err := client.Bulk(context.Background(), index, "type1", params, body)
 	if err != nil {
 		t.Fatalf("Bulk() returned error: %s", err)
 	}
@@ -105,6 +107,7 @@ func TestBulkMoreOperations(t *testing.T) {
 		{
 			"index": map[string]interface{}{
 				"_index": index,
+				"_type":  "type1",
 				"_id":    "1",
 			},
 		},
@@ -115,6 +118,7 @@ func TestBulkMoreOperations(t *testing.T) {
 		{
 			"delete": map[string]interface{}{
 				"_index": index,
+				"_type":  "type1",
 				"_id":    "2",
 			},
 		},
@@ -122,6 +126,7 @@ func TestBulkMoreOperations(t *testing.T) {
 		{
 			"create": map[string]interface{}{
 				"_index": index,
+				"_type":  "type1",
 				"_id":    "3",
 			},
 		},
@@ -133,6 +138,7 @@ func TestBulkMoreOperations(t *testing.T) {
 			"update": map[string]interface{}{
 				"_id":    "1",
 				"_index": index,
+				"_type":  "type1",
 			},
 		},
 		{
@@ -150,7 +156,7 @@ func TestBulkMoreOperations(t *testing.T) {
 	params := map[string]string{
 		"refresh": "true",
 	}
-	_, resp, err := client.Bulk(index, "", params, body)
+	_, resp, err := client.Bulk(context.Background(), index, "type1", params, body)
 	if err != nil {
 		t.Fatalf("Bulk() returned error: %s [%s]", err, resp)
 	}

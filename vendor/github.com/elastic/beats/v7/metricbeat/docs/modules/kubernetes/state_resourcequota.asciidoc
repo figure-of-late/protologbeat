@@ -5,6 +5,8 @@ This file is generated! See scripts/mage/docs_collector.go
 [[metricbeat-metricset-kubernetes-state_resourcequota]]
 === Kubernetes state_resourcequota metricset
 
+beta[]
+
 include::../../../module/kubernetes/state_resourcequota/_meta/docs.asciidoc[]
 
 

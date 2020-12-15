@@ -43,12 +43,14 @@ import (
 	"github.com/elastic/beats/v7/libbeat/cfgfile"
 	"github.com/elastic/beats/v7/libbeat/cloudid"
 	"github.com/elastic/beats/v7/libbeat/common"
+	"github.com/elastic/beats/v7/libbeat/common/cfgwarn"
 	"github.com/elastic/beats/v7/libbeat/common/file"
 	"github.com/elastic/beats/v7/libbeat/common/reload"
 	"github.com/elastic/beats/v7/libbeat/common/seccomp"
 	"github.com/elastic/beats/v7/libbeat/dashboards"
 	"github.com/elastic/beats/v7/libbeat/esleg/eslegclient"
 	"github.com/elastic/beats/v7/libbeat/idxmgmt"
+	"github.com/elastic/beats/v7/libbeat/instrumentation"
 	"github.com/elastic/beats/v7/libbeat/keystore"
 	"github.com/elastic/beats/v7/libbeat/kibana"
 	"github.com/elastic/beats/v7/libbeat/logp"
@@ -94,11 +96,12 @@ type beatConfig struct {
 	Seccomp  *common.Config `config:"seccomp"`
 
 	// beat internal components configurations
-	HTTP          *common.Config `config:"http"`
-	Path          paths.Path     `config:"path"`
-	Logging       *common.Config `config:"logging"`
-	MetricLogging *common.Config `config:"logging.metrics"`
-	Keystore      *common.Config `config:"keystore"`
+	HTTP            *common.Config         `config:"http"`
+	Path            paths.Path             `config:"path"`
+	Logging         *common.Config         `config:"logging"`
+	MetricLogging   *common.Config         `config:"logging.metrics"`
+	Keystore        *common.Config         `config:"keystore"`
+	Instrumentation instrumentation.Config `config:"instrumentation"`
 
 	// output/publishing related configurations
 	Pipeline pipeline.Config `config:",inline"`
@@ -317,12 +320,12 @@ func (b *Beat) createBeater(bt beat.Creator) (beat.Beater, error) {
 
 	// Report central management state
 	mgmt := monitoring.GetNamespace("state").GetRegistry().NewRegistry("management")
-	monitoring.NewBool(mgmt, "enabled").Set(b.ConfigManager.Enabled())
+	monitoring.NewBool(mgmt, "enabled").Set(b.Manager.Enabled())
 
 	debugf("Initializing output plugins")
 	outputEnabled := b.Config.Output.IsSet() && b.Config.Output.Config().Enabled()
 	if !outputEnabled {
-		if b.ConfigManager.Enabled() {
+		if b.Manager.Enabled() {
 			logp.Info("Output is configured through Central Management")
 		} else {
 			msg := "No outputs are defined. Please define one under the output section."
@@ -330,12 +333,12 @@ func (b *Beat) createBeater(bt beat.Creator) (beat.Beater, error) {
 			return nil, errors.New(msg)
 		}
 	}
-
 	pipeline, err := pipeline.Load(b.Info,
 		pipeline.Monitors{
 			Metrics:   reg,
 			Telemetry: monitoring.GetNamespace("state").GetRegistry(),
 			Logger:    logp.L().Named("publisher"),
+			Tracer:    b.Instrumentation.Tracer(),
 		},
 		b.Config.Pipeline,
 		b.processing,
@@ -369,6 +372,17 @@ func (b *Beat) launch(settings Settings, bt beat.Creator) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err := b.processing.Close(); err != nil {
+			logp.Warn("Failed to close global processing: %v", err)
+		}
+	}()
+
+	// Windows: Mark service as stopped.
+	// After this is run, a Beat service is considered by the OS to be stopped
+	// and another instance of the process can be started.
+	// This must be the first deferred cleanup task (last to execute).
+	defer svc.NotifyTermination()
 
 	// Try to acquire exclusive lock on data path to prevent another beat instance
 	// sharing same data path.
@@ -427,7 +441,11 @@ func (b *Beat) launch(settings Settings, bt beat.Creator) error {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	svc.HandleSignals(beater.Stop, cancel)
+	var stopBeat = func() {
+		b.Instrumentation.Tracer().Close()
+		beater.Stop()
+	}
+	svc.HandleSignals(stopBeat, cancel)
 
 	err = b.loadDashboards(ctx, false)
 	if err != nil {
@@ -437,8 +455,8 @@ func (b *Beat) launch(settings Settings, bt beat.Creator) error {
 	logp.Info("%s start running.", b.Info.Beat)
 
 	// Launch config manager
-	b.ConfigManager.Start()
-	defer b.ConfigManager.Stop()
+	b.Manager.Start(beater.Stop)
+	defer b.Manager.Stop()
 
 	return beater.Run(&b.Beat)
 }
@@ -465,6 +483,7 @@ func (b *Beat) TestConfig(settings Settings, bt beat.Creator) error {
 //SetupSettings holds settings necessary for beat setup
 type SetupSettings struct {
 	Dashboard       bool
+	MachineLearning bool
 	Pipeline        bool
 	IndexManagement bool
 	//Deprecated: use IndexManagementKey instead
@@ -533,6 +552,16 @@ func (b *Beat) Setup(settings Settings, bt beat.Creator, setup SetupSettings) er
 			}
 		}
 
+		if setup.MachineLearning && b.SetupMLCallback != nil {
+			cfgwarn.Deprecate("8.0.0", "Setting up ML using %v is going to be removed. Please use the ML app to setup jobs.", strings.Title(b.Info.Beat))
+			fmt.Println("Setting up ML using setup --machine-learning is going to be removed in 8.0.0. Please use the ML app instead.\nSee more: https://www.elastic.co/guide/en/machine-learning/current/index.html")
+			err = b.SetupMLCallback(&b.Beat, b.Config.Kibana)
+			if err != nil {
+				return err
+			}
+			fmt.Println("Loaded machine learning job configurations")
+		}
+
 		if setup.Pipeline && b.OverwritePipelinesCallback != nil {
 			esConfig := b.Config.Output.Config()
 			err = b.OverwritePipelinesCallback(esConfig)
@@ -583,7 +612,14 @@ func (b *Beat) configure(settings Settings) error {
 		common.OverwriteConfigOpts(configOpts(store))
 	}
 
+	instrumentation, err := instrumentation.New(cfg, b.Info.Beat, b.Info.Version)
+	if err != nil {
+		return err
+	}
+	b.Beat.Instrumentation = instrumentation
+
 	b.keystore = store
+	b.Beat.Keystore = store
 	err = cloudid.OverwriteSettings(cfg)
 	if err != nil {
 		return err
@@ -617,12 +653,12 @@ func (b *Beat) configure(settings Settings) error {
 	logp.Info("Beat ID: %v", b.Info.ID)
 
 	// initialize config manager
-	b.ConfigManager, err = management.Factory(b.Config.Management)(b.Config.Management, reload.Register, b.Beat.Info.ID)
+	b.Manager, err = management.Factory(b.Config.Management)(b.Config.Management, reload.Register, b.Beat.Info.ID)
 	if err != nil {
 		return err
 	}
 
-	if err := b.ConfigManager.CheckRawConfig(b.RawConfig); err != nil {
+	if err := b.Manager.CheckRawConfig(b.RawConfig); err != nil {
 		return err
 	}
 

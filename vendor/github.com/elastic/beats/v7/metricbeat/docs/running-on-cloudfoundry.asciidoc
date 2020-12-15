@@ -1,5 +1,5 @@
 [[running-on-cloudfoundry]]
-=== Running {beatname_uc} on Cloud Foundry
+=== Run {beatname_uc} on Cloud Foundry
 
 You can use {beatname_uc} on Cloud Foundry to retrieve and ship metrics.
 
@@ -14,18 +14,19 @@ endif::[]
 [float]
 ==== Cloud Foundry credentials
 
-{beatname_uc} needs credentials created with UAA so it can connect to loggregator to receive the logs. The uaac
+{beatname_uc} needs credentials created with UAA so it can connect to loggregator to receive the logs. The `uaac`
 command will create the required credentials for connecting to loggregator.
 
-["source", "sh"]
+["source","sh",subs="attributes"]
 ------------------------------------------------
 uaac client add {beatname_lc} --name {beatname_lc} --secret changeme --authorized_grant_types client_credentials,refresh_token --authorities doppler.firehose,cloud_controller.admin_read_only
 ------------------------------------------------
 
 [WARNING]
 =======================================
-*Use a unique secret:* The uaac command above is just an example and the secret should be changed and the
-`{beatname_lc}.yml` should be updated with your choosen secret.
+*Use a unique secret:* The `uaac` command shown here is an example. Remember to
+replace `changeme` with your secret, and update the +{beatname_lc}.yml+ file to
+use your chosen secret.
 =======================================
 
 
@@ -65,16 +66,8 @@ To check the status, run:
 $ cf apps
 
 name         requested state   instances   memory   disk   urls
-metricbeat   started           1/1         256M     1G
+metricbeat   started           1/1         512M     1G
 ------------------------------------------------
 
 Metrics should start flowing to Elasticsearch. The events are annotated with
 metadata added by the <<add-cloudfoundry-metadata>> processor.
-
-
-[WARNING]
-=======================================
-*Set shard_id to scale:* By default {beatname_uc} will generate a random `shard_id` when it starts. In the case that
-{beatname_uc} needs to be scaled passed 1 instance, be sure to set a static `shard_id`. Not setting a static `shard_id`
-will result in duplicate events being pushed to Elasticsearch.
-=======================================

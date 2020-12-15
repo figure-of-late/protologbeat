@@ -33,7 +33,6 @@
                     "port": 60940
                 },
                 "port": 5672,
-                "state": "running",
                 "type": "network"
             },
             "node": {
@@ -83,7 +82,6 @@
                     "port": 60938
                 },
                 "port": 5672,
-                "state": "running",
                 "type": "network"
             },
             "node": {

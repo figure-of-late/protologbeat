@@ -19,6 +19,8 @@ package beat
 
 import (
 	"github.com/elastic/beats/v7/libbeat/common"
+	"github.com/elastic/beats/v7/libbeat/instrumentation"
+	"github.com/elastic/beats/v7/libbeat/keystore"
 	"github.com/elastic/beats/v7/libbeat/management"
 )
 
@@ -53,7 +55,8 @@ type Beat struct {
 	Info      Info     // beat metadata.
 	Publisher Pipeline // Publisher pipeline
 
-	InSetupCmd bool // this is set to true when the `setup` command is called
+	SetupMLCallback SetupMLCallback // setup callback for ML job configs
+	InSetupCmd      bool            // this is set to true when the `setup` command is called
 
 	OverwritePipelinesCallback OverwritePipelinesCallback // ingest pipeline loader callback
 	// XXX: remove Config from public interface.
@@ -65,7 +68,11 @@ type Beat struct {
 
 	Fields []byte // Data from fields.yml
 
-	ConfigManager management.ConfigManager // config manager
+	Manager management.Manager // manager
+
+	Keystore keystore.Keystore
+
+	Instrumentation instrumentation.Instrumentation // instrumentation holds an APM agent for capturing and reporting traces
 }
 
 // BeatConfig struct contains the basic configuration of every beat
@@ -73,6 +80,10 @@ type BeatConfig struct {
 	// output/publishing related configurations
 	Output common.ConfigNamespace `config:"output"`
 }
+
+// SetupMLCallback can be used by the Beat to register MachineLearning configurations
+// for the enabled modules.
+type SetupMLCallback func(*Beat, *common.Config) error
 
 // OverwritePipelinesCallback can be used by the Beat to register Ingest pipeline loader
 // for the enabled modules.

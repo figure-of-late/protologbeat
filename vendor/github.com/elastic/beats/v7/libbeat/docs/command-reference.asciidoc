@@ -91,7 +91,7 @@ endif::[]
 
 Some of the features described here require an Elastic license. For
 more information, see https://www.elastic.co/subscriptions and
-{stack-ov}/license-management.html[License Management].
+{kibana-ref}/managing-licenses.html[License Management].
 
 
 [options="header"]
@@ -156,18 +156,7 @@ Create an API Key with the specified privilege(s). No required flags.
 +
 The user requesting to create an API Key needs to have APM privileges used by the APM Server.
 A superuser, by default, has these privileges. For other users,
-you can create them. Create a role that is then assigned to the user:
-+
-["source","sh",subs="attributes"]
-----
-PUT /_security/role/apm-privileges {
-	"applications": [{
-	  "application": "apm",
-	  "privileges": ["sourcemap:write", "event:write", "config_agent:read"],
-	  "resources": ["*"]
-	}]
-}
-----
+you can create them. See <<privileges-api-key,create an API key user>> for required privileges.
 
 *`info`*::
 Query API Key(s). `--id` or `--name` required.
@@ -252,7 +241,7 @@ the credentials required by your cloud service provider.
 ----
 
 *`FUNCTION_NAME`*::
-Specifies the name of the function to deploy.  
+Specifies the name of the function to deploy.
 
 *FLAGS*
 
@@ -498,7 +487,7 @@ ifeval::["{beatname_lc}"=="functionbeat"]
 [[package-command]]
 ==== `package` command
 
-{package-command-short-desc}. 
+{package-command-short-desc}.
 
 *SYNOPSIS*
 
@@ -513,7 +502,7 @@ ifeval::["{beatname_lc}"=="functionbeat"]
 Shows help for the `package` command.
 
 *`-o, --output`*::
-Specifies the full path pattern to use when creating the packages. 
+Specifies the full path pattern to use when creating the packages.
 
 {global-flags}
 
@@ -538,7 +527,7 @@ the credentials required by your cloud service provider.
 ----
 
 *`FUNCTION_NAME`*::
-Specifies the name of the function to remove.  
+Specifies the name of the function to remove.
 
 *FLAGS*
 
@@ -793,6 +782,11 @@ endif::no_dashboards[]
 *`-h, --help`*::
 Shows help for the `setup` command.
 
+ifdef::has_ml_jobs[]
+*`--machine-learning`*::
+Sets up machine learning job configurations only.
+endif::[]
+
 ifeval::["{beatname_lc}"=="filebeat"]
 *`--modules MODULE_LIST`*::
 Specifies a comma-separated list of modules. Use this flag to avoid errors when
@@ -832,6 +826,7 @@ ifeval::["{beatname_lc}"=="filebeat"]
 ["source","sh",subs="attributes"]
 -----
 {beatname_lc} setup --dashboards
+{beatname_lc} setup --machine-learning
 {beatname_lc} setup --pipelines
 {beatname_lc} setup --pipelines --modules system,nginx,mysql <1>
 {beatname_lc} setup --index-management
@@ -847,6 +842,7 @@ ifndef::no_dashboards[]
 ["source","sh",subs="attributes"]
 -----
 {beatname_lc} setup --dashboards
+{beatname_lc} setup --machine-learning
 {beatname_lc} setup --index-management
 -----
 endif::no_dashboards[]
@@ -855,6 +851,7 @@ ifndef::apm-server[]
 ifdef::no_dashboards[]
 ["source","sh",subs="attributes"]
 -----
+{beatname_lc} setup --machine-learning
 {beatname_lc} setup --index-management
 -----
 endif::no_dashboards[]
@@ -941,7 +938,7 @@ the credentials required by your cloud service provider.
 ----
 
 *`FUNCTION_NAME`*::
-Specifies the name of the function to update.  
+Specifies the name of the function to update.
 
 *FLAGS*
 
@@ -1053,8 +1050,8 @@ Sets the path for log files. See the <<directory-layout>> section for details.
 *`--strict.perms`*::
 Sets strict permission checking on configuration files. The default is `-strict.perms=true`.
 ifndef::apm-server[]
-See {beats-ref}/config-file-permissions.html[Config file ownership and permissions] in
-the _Beats Platform Reference_ for more information.
+See {beats-ref}/config-file-permissions.html[Config file ownership and permissions]
+for more information.
 endif::[]
 ifdef::apm-server[]
 See <<config-file-ownership>> for more information.
